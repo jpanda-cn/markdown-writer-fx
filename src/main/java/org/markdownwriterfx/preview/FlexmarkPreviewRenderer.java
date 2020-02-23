@@ -27,17 +27,10 @@
 
 package org.markdownwriterfx.preview;
 
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.ServiceLoader;
-import org.markdownwriterfx.addons.PreviewRendererAddon;
-import org.markdownwriterfx.options.MarkdownExtensions;
-import org.markdownwriterfx.util.Range;
 import com.vladsch.flexmark.ast.Heading;
 import com.vladsch.flexmark.ast.Node;
 import com.vladsch.flexmark.ast.NodeVisitor;
+import com.vladsch.flexmark.ext.emoji.EmojiExtension;
 import com.vladsch.flexmark.html.AttributeProvider;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.html.IndependentAttributeProviderFactory;
@@ -45,7 +38,17 @@ import com.vladsch.flexmark.html.renderer.AttributablePart;
 import com.vladsch.flexmark.html.renderer.LinkResolverContext;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.html.Attributes;
+import com.vladsch.flexmark.util.options.MutableDataSet;
 import com.vladsch.flexmark.util.sequence.BasedSequence;
+import org.markdownwriterfx.addons.PreviewRendererAddon;
+import org.markdownwriterfx.options.MarkdownExtensions;
+import org.markdownwriterfx.util.Range;
+
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.ServiceLoader;
 
 /**
  * flexmark-java preview.
@@ -53,8 +56,7 @@ import com.vladsch.flexmark.util.sequence.BasedSequence;
  * @author Karl Tauber
  */
 class FlexmarkPreviewRenderer
-	implements MarkdownPreviewPane.Renderer
-{
+	implements MarkdownPreviewPane.Renderer {
 	private static final ServiceLoader<PreviewRendererAddon> addons = ServiceLoader.load(PreviewRendererAddon.class);
 
 	private String markdownText;
@@ -139,8 +141,8 @@ class FlexmarkPreviewRenderer
 
 	private Node parseMarkdown(String text) {
 		Parser parser = Parser.builder()
-				.extensions(MarkdownExtensions.getFlexmarkExtensions())
-				.build();
+			.extensions(MarkdownExtensions.getFlexmarkExtensions())
+			.build();
 		return parser.parse(text);
 	}
 
@@ -158,10 +160,10 @@ class FlexmarkPreviewRenderer
 		if (addons.iterator().hasNext()) {
 			String text = markdownText;
 
-		    for (PreviewRendererAddon addon : addons)
-	            text = addon.preParse(text, path);
+			for (PreviewRendererAddon addon : addons)
+				text = addon.preParse(text, path);
 
-		    astRoot = parseMarkdown(text);
+			astRoot = parseMarkdown(text);
 		} else {
 			// no addons --> use cached AST
 			astRoot = toAstRoot();
@@ -170,16 +172,23 @@ class FlexmarkPreviewRenderer
 		if (astRoot == null)
 			return "";
 
-		HtmlRenderer.Builder builder = HtmlRenderer.builder()
-				.extensions(MarkdownExtensions.getFlexmarkExtensions());
+		HtmlRenderer.Builder builder = HtmlRenderer.builder();
+
+		MutableDataSet dataSet = new MutableDataSet();
+		dataSet.set(EmojiExtension.ROOT_IMAGE_PATH, getClass().getResource("emojis/").toString());
+		builder.setAll(dataSet);
+
+		builder.extensions(MarkdownExtensions.getFlexmarkExtensions());
+
+
 		if (!source)
 			builder.attributeProviderFactory(new MyAttributeProvider.Factory());
 		String html = builder.build().render(astRoot);
 
-        for (PreviewRendererAddon addon : addons)
-            html = addon.postRender(html, path);
+		for (PreviewRendererAddon addon : addons)
+			html = addon.postRender(html, path);
 
-        return html;
+		return html;
 	}
 
 	private String printTree() {
@@ -205,7 +214,7 @@ class FlexmarkPreviewRenderer
 
 	private void printAttributes(StringBuilder buf, Node node) {
 		if (node instanceof Heading)
-			printAttribute(buf, "level", ((Heading)node).getLevel());
+			printAttribute(buf, "level", ((Heading) node).getLevel());
 	}
 
 	private void printAttribute(StringBuilder buf, String name, Object value) {
@@ -215,11 +224,9 @@ class FlexmarkPreviewRenderer
 	//---- class MyAttributeProvider ------------------------------------------
 
 	private static class MyAttributeProvider
-		implements AttributeProvider
-	{
+		implements AttributeProvider {
 		private static class Factory
-			extends IndependentAttributeProviderFactory
-		{
+			extends IndependentAttributeProviderFactory {
 			@Override
 			public AttributeProvider create(LinkResolverContext context) {
 				return new MyAttributeProvider();

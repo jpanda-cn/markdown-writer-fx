@@ -121,7 +121,6 @@ class WebViewPreview
 		String scrollScript = (lastScrollX > 0 || lastScrollY > 0)
 				? ("  onload='window.scrollTo("+lastScrollX+", "+lastScrollY+");'")
 				: "";
-
 		webView.getEngine().loadContent(
 			"<!DOCTYPE html>\n"
 			+ "<html>\n"
@@ -144,6 +143,7 @@ class WebViewPreview
 			+ "<script>" + highlightNodesAt(lastEditorSelection) + "</script>\n"
 			+ "</body>\n"
 			+ "</html>");
+
 	}
 
 	@Override

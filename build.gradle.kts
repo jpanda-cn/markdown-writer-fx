@@ -22,6 +22,7 @@ plugins {
 	java
 	application
 	eclipse
+	maven
 }
 
 repositories {
@@ -67,6 +68,7 @@ dependencies {
 	compile( "com.vladsch.flexmark:flexmark-ext-toc:${flexmarkVersion}" )
 	compile( "com.vladsch.flexmark:flexmark-ext-wikilink:${flexmarkVersion}" )
 	compile( "com.vladsch.flexmark:flexmark-ext-yaml-front-matter:${flexmarkVersion}" )
+	compile( "com.vladsch.flexmark:flexmark-ext-emoji:${flexmarkVersion}" )
 
 	val commonmarkVersion = "0.12.1"
 	compile( "com.atlassian.commonmark:commonmark:${commonmarkVersion}" )
@@ -143,5 +145,26 @@ eclipse {
 				}
 			} )
 		}
+	}
+}
+task("toPom"){
+	doLast {
+		project.the<MavenPluginConvention>().pom {
+			project {
+				groupId = "org.example"
+				artifactId = "test"
+				version = "1.0.0"
+				withGroovyBuilder {
+					"inceptionYear"("2008")
+					"licenses" {
+						"license" {
+							"name"("The Apache Software License, Version 2.0")
+							"url"("http://www.apache.org/licenses/LICENSE-2.0.txt")
+							"distribution"("repo")
+						}
+					}
+				}
+			}
+		}.writeTo("$buildDir/newPom.xml")
 	}
 }
