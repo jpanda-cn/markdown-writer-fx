@@ -34,6 +34,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.function.BiConsumer;
+
+import com.vladsch.flexmark.util.ast.Node;
+import com.vladsch.flexmark.util.ast.NodeVisitor;
+import com.vladsch.flexmark.util.ast.VisitHandler;
+import com.vladsch.flexmark.util.ast.Visitor;
 import javafx.application.Platform;
 import com.vladsch.flexmark.ast.*;
 import com.vladsch.flexmark.ext.abbreviation.Abbreviation;
@@ -51,6 +57,7 @@ import com.vladsch.flexmark.util.sequence.BasedSequence;
 import org.fxmisc.richtext.model.Paragraph;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.fxmisc.richtext.model.TwoDimensional.Bias;
+import org.jetbrains.annotations.NotNull;
 import org.markdownwriterfx.addons.MarkdownSyntaxHighlighterAddon;
 import org.markdownwriterfx.syntaxhighlighter.SyntaxHighlighter;
 import org.markdownwriterfx.util.Range;
@@ -226,7 +233,7 @@ class MarkdownSyntaxHighlighter
 			new VisitHandler<>(HtmlEntity.class, this::visit))
 		{
 			@Override
-			public void visit(Node node) {
+			protected void processNode(@NotNull Node node, boolean withChildren, @NotNull BiConsumer<Node, Visitor<Node>> processor) {
 				Class<? extends Node> nodeClass = node.getClass();
 
 				StyleClass style = node2style.get(nodeClass);
@@ -237,12 +244,14 @@ class MarkdownSyntaxHighlighter
 				if (lineStyle != null)
 					setLineStyleClass(node, lineStyle);
 
-				VisitHandler<?> handler = myCustomHandlersMap.get(nodeClass);
+				/*2020?2?23?14:12:21 ??VisitHandler????*/
+				VisitHandler<?> handler = getHandler(nodeClass);
 				if (handler != null)
 					handler.visit(node);
 
 				visitChildren(node);
 			}
+
 		};
 		visitor.visit(astRoot);
 

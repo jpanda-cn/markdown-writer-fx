@@ -28,8 +28,8 @@
 package org.markdownwriterfx.preview;
 
 import com.vladsch.flexmark.ast.Heading;
-import com.vladsch.flexmark.ast.Node;
-import com.vladsch.flexmark.ast.NodeVisitor;
+import com.vladsch.flexmark.util.ast.Node;
+import com.vladsch.flexmark.util.ast.NodeVisitor;
 import com.vladsch.flexmark.ext.emoji.EmojiExtension;
 import com.vladsch.flexmark.html.AttributeProvider;
 import com.vladsch.flexmark.html.HtmlRenderer;
@@ -37,9 +37,11 @@ import com.vladsch.flexmark.html.IndependentAttributeProviderFactory;
 import com.vladsch.flexmark.html.renderer.AttributablePart;
 import com.vladsch.flexmark.html.renderer.LinkResolverContext;
 import com.vladsch.flexmark.parser.Parser;
+import com.vladsch.flexmark.util.ast.Visitor;
 import com.vladsch.flexmark.util.html.Attributes;
-import com.vladsch.flexmark.util.options.MutableDataSet;
+import com.vladsch.flexmark.util.data.MutableDataSet;
 import com.vladsch.flexmark.util.sequence.BasedSequence;
+import org.jetbrains.annotations.NotNull;
 import org.markdownwriterfx.addons.PreviewRendererAddon;
 import org.markdownwriterfx.options.MarkdownExtensions;
 import org.markdownwriterfx.util.Range;
@@ -49,6 +51,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.function.BiConsumer;
 
 /**
  * flexmark-java preview.
@@ -116,7 +119,7 @@ class FlexmarkPreviewRenderer
 
 		NodeVisitor visitor = new NodeVisitor(Collections.emptyList()) {
 			@Override
-			public void visit(Node node) {
+			protected void processNode(@NotNull Node node, boolean withChildren, @NotNull BiConsumer<Node, Visitor<Node>> processor) {
 				BasedSequence chars = node.getChars();
 				if (isInSequence(startOffset, endOffset, chars))
 					sequences.add(new Range(chars.getStartOffset(), chars.getEndOffset()));
@@ -128,6 +131,7 @@ class FlexmarkPreviewRenderer
 
 				visitChildren(node);
 			}
+
 		};
 		visitor.visit(astRoot);
 		return sequences;
@@ -227,8 +231,9 @@ class FlexmarkPreviewRenderer
 		implements AttributeProvider {
 		private static class Factory
 			extends IndependentAttributeProviderFactory {
+
 			@Override
-			public AttributeProvider create(LinkResolverContext context) {
+			public @NotNull AttributeProvider apply(@NotNull LinkResolverContext context) {
 				return new MyAttributeProvider();
 			}
 		}

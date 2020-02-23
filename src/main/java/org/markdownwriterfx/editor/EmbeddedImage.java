@@ -35,7 +35,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
+
+import com.vladsch.flexmark.util.ast.Visitor;
 import javafx.scene.Node;
 import javafx.scene.control.IndexRange;
 import javafx.scene.image.Image;
@@ -44,10 +47,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Polyline;
 import org.fxmisc.richtext.model.Paragraph;
 import org.fxmisc.richtext.model.ReadOnlyStyledDocument;
+import org.jetbrains.annotations.NotNull;
 import org.reactfx.util.Either;
 import com.vladsch.flexmark.ast.ImageRef;
 import com.vladsch.flexmark.ast.LinkNodeBase;
-import com.vladsch.flexmark.ast.NodeVisitor;
+import com.vladsch.flexmark.util.ast.NodeVisitor;
 
 /**
  * @author Karl Tauber
@@ -122,15 +126,16 @@ class EmbeddedImage
 		}
 	}
 
-	static void replaceImageSegments(MarkdownTextArea textArea, com.vladsch.flexmark.ast.Node astRoot, Path basePath) {
+	static void replaceImageSegments(MarkdownTextArea textArea, com.vladsch.flexmark.util.ast.Node astRoot, Path basePath) {
 		// remember current selection (because textArea.replace() changes selection)
 		IndexRange selection = textArea.getSelection();
 
 		// replace first character of image markup with an EmbeddedImage object
 		HashSet<EmbeddedImage> addedImages = new HashSet<>();
 		NodeVisitor visitor = new NodeVisitor(Collections.emptyList()) {
+
 			@Override
-			public void visit(com.vladsch.flexmark.ast.Node node) {
+			protected void processNode(com.vladsch.flexmark.util.ast.@NotNull Node node, boolean withChildren, @NotNull BiConsumer<com.vladsch.flexmark.util.ast.Node, Visitor<com.vladsch.flexmark.util.ast.Node>> processor) {
 				if (node instanceof com.vladsch.flexmark.ast.Image ||
 					node instanceof ImageRef)
 				{
@@ -148,17 +153,18 @@ class EmbeddedImage
 					int end = start + 1;
 
 					EmbeddedImage embeddedImage = new EmbeddedImage(basePath,
-							url, textArea.getText(start, end));
+						url, textArea.getText(start, end));
 					addedImages.add(embeddedImage);
 
 					textArea.replace(start, end, ReadOnlyStyledDocument.fromSegment(
-							Either.right(embeddedImage),
-							Collections.<String>emptyList(),
-							Collections.<String>emptyList(),
-							textArea.getSegOps()));
+						Either.right(embeddedImage),
+						Collections.<String>emptyList(),
+						Collections.<String>emptyList(),
+						textArea.getSegOps()));
 				} else
 					visitChildren(node);
 			}
+
 		};
 		visitor.visit(astRoot);
 

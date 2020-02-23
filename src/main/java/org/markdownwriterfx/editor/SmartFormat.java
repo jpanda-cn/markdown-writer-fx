@@ -33,23 +33,23 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.function.BiConsumer;
+
+import com.vladsch.flexmark.util.ast.*;
 import javafx.scene.control.IndexRange;
 import javafx.scene.input.KeyEvent;
 import org.fxmisc.richtext.MultiChangeBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.markdownwriterfx.addons.SmartFormatAddon;
 import org.markdownwriterfx.options.Options;
-import com.vladsch.flexmark.ast.Block;
 import com.vladsch.flexmark.ast.BlockQuote;
-import com.vladsch.flexmark.ast.DelimitedNode;
 import com.vladsch.flexmark.ast.HardLineBreak;
 import com.vladsch.flexmark.ast.HtmlBlock;
 import com.vladsch.flexmark.ast.ListItem;
-import com.vladsch.flexmark.ast.Node;
-import com.vladsch.flexmark.ast.NodeVisitor;
 import com.vladsch.flexmark.ast.Paragraph;
 import com.vladsch.flexmark.ast.SoftLineBreak;
 import com.vladsch.flexmark.ast.Text;
-import com.vladsch.flexmark.util.Pair;
+import com.vladsch.flexmark.util.misc.Pair;
 import com.vladsch.flexmark.util.sequence.BasedSequence;
 import static org.markdownwriterfx.addons.SmartFormatAddon.*;
 
@@ -85,12 +85,13 @@ class SmartFormat
 			Node oldMarkdownAST = editor.parseMarkdown(oldMarkdown);
 			NodeVisitor visitor = new NodeVisitor(Collections.emptyList()) {
 				@Override
-				public void visit(Node node) {
+				protected void processNode(@NotNull Node node, boolean withChildren, @NotNull BiConsumer<Node, Visitor<Node>> processor) {
 					if (node instanceof Paragraph || node instanceof HtmlBlock) {
 						oldParagraphs.add(node.getChars());
 					} else
 						visitChildren(node);
 				}
+
 			};
 			visitor.visit(oldMarkdownAST);
 		}
@@ -125,7 +126,7 @@ class SmartFormat
 		ArrayList<Pair<Block, String>> formattedParagraphs = new ArrayList<>();
 		NodeVisitor visitor = new NodeVisitor(Collections.emptyList()) {
 			@Override
-			public void visit(Node node) {
+			protected void processNode(@NotNull Node node, boolean withChildren, @NotNull BiConsumer<Node, Visitor<Node>> processor) {
 				if (node instanceof Paragraph || node instanceof HtmlBlock) {
 					if (selection != null && !isNodeSelected(node, selection))
 						return;
@@ -146,6 +147,7 @@ class SmartFormat
 				} else
 					visitChildren(node);
 			}
+
 		};
 		visitor.visit(markdownAST);
 		return formattedParagraphs;

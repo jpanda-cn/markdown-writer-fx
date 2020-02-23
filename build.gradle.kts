@@ -54,7 +54,7 @@ dependencies {
 	compile( "org.apache.commons:commons-lang3:3.8.1" )
 	compile( "com.esotericsoftware.yamlbeans:yamlbeans:1.13" )
 
-	val flexmarkVersion = "0.35.0"
+	val flexmarkVersion = "0.60.2"
 	compile( "com.vladsch.flexmark:flexmark:${flexmarkVersion}" )
 	compile( "com.vladsch.flexmark:flexmark-ext-abbreviation:${flexmarkVersion}" )
 	compile( "com.vladsch.flexmark:flexmark-ext-anchorlink:${flexmarkVersion}" )

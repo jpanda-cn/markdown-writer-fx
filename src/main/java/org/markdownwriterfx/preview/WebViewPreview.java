@@ -35,16 +35,20 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.function.BiConsumer;
+
+import com.vladsch.flexmark.util.ast.Visitor;
 import javafx.concurrent.Worker.State;
 import javafx.scene.control.IndexRange;
 import javafx.scene.web.WebView;
+import org.jetbrains.annotations.NotNull;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.preview.MarkdownPreviewPane.PreviewContext;
 import org.markdownwriterfx.preview.MarkdownPreviewPane.Renderer;
 import org.markdownwriterfx.util.Utils;
 import com.vladsch.flexmark.ast.FencedCodeBlock;
-import com.vladsch.flexmark.ast.Node;
-import com.vladsch.flexmark.ast.NodeVisitor;
+import com.vladsch.flexmark.util.ast.Node;
+import com.vladsch.flexmark.util.ast.NodeVisitor;
 
 /**
  * WebView preview.
@@ -175,7 +179,7 @@ class WebViewPreview
 		ArrayList<String> languages = new ArrayList<>();
 		NodeVisitor visitor = new NodeVisitor(Collections.emptyList()) {
 			@Override
-			public void visit(Node node) {
+			protected void processNode(@NotNull Node node, boolean withChildren, @NotNull BiConsumer<Node, Visitor<Node>> processor) {
 				if (node instanceof FencedCodeBlock) {
 					String language = ((FencedCodeBlock)node).getInfo().toString();
 					if (language.contains(language))
@@ -189,6 +193,7 @@ class WebViewPreview
 				} else
 					visitChildren(node);
 			}
+
 		};
 		visitor.visit(astRoot);
 
