@@ -69,6 +69,7 @@ dependencies {
 	compile( "com.vladsch.flexmark:flexmark-ext-wikilink:${flexmarkVersion}" )
 	compile( "com.vladsch.flexmark:flexmark-ext-yaml-front-matter:${flexmarkVersion}" )
 	compile( "com.vladsch.flexmark:flexmark-ext-emoji:${flexmarkVersion}" )
+	compile( "com.vladsch.flexmark:flexmark-ext-gitlab:${flexmarkVersion}" )
 
 	val commonmarkVersion = "0.12.1"
 	compile( "com.atlassian.commonmark:commonmark:${commonmarkVersion}" )
@@ -78,6 +79,9 @@ dependencies {
 	compile( "com.atlassian.commonmark:commonmark-ext-heading-anchor:${commonmarkVersion}" )
 	compile( "com.atlassian.commonmark:commonmark-ext-ins:${commonmarkVersion}" )
 	compile( "com.atlassian.commonmark:commonmark-ext-yaml-front-matter:${commonmarkVersion}" )
+
+	val javafxWebviewDebuggerVersion="0.7.6"
+	compile( "com.vladsch.javafx-webview-debugger:javafx-webview-debugger:${javafxWebviewDebuggerVersion}" )
 
 	if( javaCompatibility >= JavaVersion.VERSION_11 ) {
 		val javafxVersion = "11.0.2"

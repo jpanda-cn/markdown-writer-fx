@@ -28,8 +28,6 @@
 package org.markdownwriterfx.preview;
 
 import com.vladsch.flexmark.ast.Heading;
-import com.vladsch.flexmark.util.ast.Node;
-import com.vladsch.flexmark.util.ast.NodeVisitor;
 import com.vladsch.flexmark.ext.emoji.EmojiExtension;
 import com.vladsch.flexmark.html.AttributeProvider;
 import com.vladsch.flexmark.html.HtmlRenderer;
@@ -37,9 +35,11 @@ import com.vladsch.flexmark.html.IndependentAttributeProviderFactory;
 import com.vladsch.flexmark.html.renderer.AttributablePart;
 import com.vladsch.flexmark.html.renderer.LinkResolverContext;
 import com.vladsch.flexmark.parser.Parser;
+import com.vladsch.flexmark.util.ast.Node;
+import com.vladsch.flexmark.util.ast.NodeVisitor;
 import com.vladsch.flexmark.util.ast.Visitor;
-import com.vladsch.flexmark.util.html.Attributes;
 import com.vladsch.flexmark.util.data.MutableDataSet;
+import com.vladsch.flexmark.util.html.Attributes;
 import com.vladsch.flexmark.util.sequence.BasedSequence;
 import org.jetbrains.annotations.NotNull;
 import org.markdownwriterfx.addons.PreviewRendererAddon;
@@ -177,17 +177,16 @@ class FlexmarkPreviewRenderer
 			return "";
 
 		HtmlRenderer.Builder builder = HtmlRenderer.builder();
-
 		MutableDataSet dataSet = new MutableDataSet();
 		dataSet.set(EmojiExtension.ROOT_IMAGE_PATH, getClass().getResource("emojis/").toString());
 		builder.setAll(dataSet);
 
 		builder.extensions(MarkdownExtensions.getFlexmarkExtensions());
 
-
 		if (!source)
 			builder.attributeProviderFactory(new MyAttributeProvider.Factory());
 		String html = builder.build().render(astRoot);
+
 
 		for (PreviewRendererAddon addon : addons)
 			html = addon.postRender(html, path);

@@ -27,6 +27,7 @@
 
 package org.markdownwriterfx;
 
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,6 +38,7 @@ import javafx.stage.Stage;
 import org.fxmisc.cssfx.CSSFX;
 import org.fxmisc.cssfx.api.URIToPathConverter;
 import org.markdownwriterfx.options.Options;
+import org.markdownwriterfx.url.ImageURLStreamHandlerFactory;
 import org.markdownwriterfx.util.StageState;
 
 /**
@@ -54,6 +56,7 @@ public class MarkdownWriterFXApp
 	private StageState stageState;
 
 	public static void main(String[] args) {
+		URL.setURLStreamHandlerFactory(new ImageURLStreamHandlerFactory());
 		launch(args);
 	}
 

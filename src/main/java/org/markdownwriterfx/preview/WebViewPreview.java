@@ -27,6 +27,19 @@
 
 package org.markdownwriterfx.preview;
 
+import com.vladsch.flexmark.ast.FencedCodeBlock;
+import com.vladsch.flexmark.util.ast.Node;
+import com.vladsch.flexmark.util.ast.NodeVisitor;
+import com.vladsch.flexmark.util.ast.Visitor;
+import javafx.concurrent.Worker.State;
+import javafx.scene.control.IndexRange;
+import javafx.scene.web.WebView;
+import org.jetbrains.annotations.NotNull;
+import org.markdownwriterfx.options.Options;
+import org.markdownwriterfx.preview.MarkdownPreviewPane.PreviewContext;
+import org.markdownwriterfx.preview.MarkdownPreviewPane.Renderer;
+import org.markdownwriterfx.util.Utils;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -37,27 +50,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.function.BiConsumer;
 
-import com.vladsch.flexmark.util.ast.Visitor;
-import javafx.concurrent.Worker.State;
-import javafx.scene.control.IndexRange;
-import javafx.scene.web.WebView;
-import org.jetbrains.annotations.NotNull;
-import org.markdownwriterfx.options.Options;
-import org.markdownwriterfx.preview.MarkdownPreviewPane.PreviewContext;
-import org.markdownwriterfx.preview.MarkdownPreviewPane.Renderer;
-import org.markdownwriterfx.util.Utils;
-import com.vladsch.flexmark.ast.FencedCodeBlock;
-import com.vladsch.flexmark.util.ast.Node;
-import com.vladsch.flexmark.util.ast.NodeVisitor;
-
 /**
  * WebView preview.
  *
  * @author Karl Tauber
  */
 class WebViewPreview
-	implements MarkdownPreviewPane.Preview
-{
+	implements MarkdownPreviewPane.Preview {
 	private static final HashMap<String, String> prismLangDependenciesMap = new HashMap<>();
 
 	private WebView webView;
@@ -65,6 +64,7 @@ class WebViewPreview
 	private int lastScrollX;
 	private int lastScrollY;
 	private IndexRange lastEditorSelection;
+
 
 	WebViewPreview() {
 	}
@@ -81,7 +81,7 @@ class WebViewPreview
 		webView.setOnDragDetected(null);
 		webView.setOnDragDone(null);
 
-		webView.getEngine().getLoadWorker().stateProperty().addListener((ob,o,n) -> {
+		webView.getEngine().getLoadWorker().stateProperty().addListener((ob, o, n) -> {
 			if (n == State.SUCCEEDED && !runWhenLoadedList.isEmpty()) {
 				ArrayList<Runnable> runnables = new ArrayList<>(runWhenLoadedList);
 				runWhenLoadedList.clear();
@@ -113,40 +113,40 @@ class WebViewPreview
 			// but only if no worker is running (in this case the result would be zero)
 			Object scrollXobj = webView.getEngine().executeScript("window.scrollX");
 			Object scrollYobj = webView.getEngine().executeScript("window.scrollY");
-			lastScrollX = (scrollXobj instanceof Number) ? ((Number)scrollXobj).intValue() : 0;
-			lastScrollY = (scrollYobj instanceof Number) ? ((Number)scrollYobj).intValue() : 0;
+			lastScrollX = (scrollXobj instanceof Number) ? ((Number) scrollXobj).intValue() : 0;
+			lastScrollY = (scrollYobj instanceof Number) ? ((Number) scrollYobj).intValue() : 0;
 		}
 		lastEditorSelection = context.getEditorSelection();
 
 		Path path = context.getPath();
 		String base = (path != null)
-				? ("<base href=\"" + path.getParent().toUri().toString() + "\">\n")
-				: "";
+			? ("<base href=\"" + path.getParent().toUri().toString() + "\">\n")
+			: "";
 		String scrollScript = (lastScrollX > 0 || lastScrollY > 0)
-				? ("  onload='window.scrollTo("+lastScrollX+", "+lastScrollY+");'")
-				: "";
+			? ("  onload='window.scrollTo(" + lastScrollX + ", " + lastScrollY + ");'")
+			: "";
 		webView.getEngine().loadContent(
 			"<!DOCTYPE html>\n"
-			+ "<html>\n"
-			+ "<head>\n"
-			+ "<link rel=\"stylesheet\" href=\"" + getClass().getResource("markdownpad-github.css") + "\">\n"
-			+ "<style>\n"
-			+ Utils.defaultIfEmpty(Options.getAdditionalCSS(), "") + "\n"
-			+ ".mwfx-editor-selection {\n"
-			+ "  border-right: 5px solid #f47806;\n"
-			+ "  margin-right: -5px;\n"
-			+ "  background-color: rgb(253, 247, 241);\n"
-			+ "}\n"
-			+ "</style>\n"
-			+ "<script src=\"" + getClass().getResource("preview.js") + "\"></script>\n"
-			+ prismSyntaxHighlighting(context.getMarkdownAST())
-			+ base
-			+ "</head>\n"
-			+ "<body" + scrollScript + ">\n"
-			+ renderer.getHtml(false)
-			+ "<script>" + highlightNodesAt(lastEditorSelection) + "</script>\n"
-			+ "</body>\n"
-			+ "</html>");
+				+ "<html>\n"
+				+ "<head>\n"
+				+ "<link rel=\"stylesheet\" href=\"" + getClass().getResource("markdownpad-github.css") + "\">\n"
+				+ "<style>\n"
+				+ Utils.defaultIfEmpty(Options.getAdditionalCSS(), "") + "\n"
+				+ ".mwfx-editor-selection {\n"
+				+ "  border-right: 5px solid #f47806;\n"
+				+ "  margin-right: -5px;\n"
+				+ "  background-color: rgb(253, 247, 241);\n"
+				+ "}\n"
+				+ "</style>\n"
+				+ "<script src=\"" + getClass().getResource("preview.js") + "\"></script>\n"
+				+ prismSyntaxHighlighting(context.getMarkdownAST())
+				+ base
+				+ "</head>\n"
+				+ "<body" + scrollScript + ">\n"
+				+ renderer.getHtml(false)
+				+ "<script>" + highlightNodesAt(lastEditorSelection) + "</script>\n"
+				+ "</body>\n"
+				+ "</html>");
 
 	}
 
@@ -181,7 +181,7 @@ class WebViewPreview
 			@Override
 			protected void processNode(@NotNull Node node, boolean withChildren, @NotNull BiConsumer<Node, Visitor<Node>> processor) {
 				if (node instanceof FencedCodeBlock) {
-					String language = ((FencedCodeBlock)node).getInfo().toString();
+					String language = ((FencedCodeBlock) node).getInfo().toString();
 					if (language.contains(language))
 						languages.add(language);
 
@@ -207,7 +207,7 @@ class WebViewPreview
 		buf.append("<link rel=\"stylesheet\" href=\"").append(getClass().getResource("prism/prism.css")).append("\">\n");
 		buf.append("<script src=\"").append(getClass().getResource("prism/prism-core.min.js")).append("\"></script>\n");
 		for (String language : languages) {
-			URL url = getClass().getResource("prism/components/prism-"+language+".min.js");
+			URL url = getClass().getResource("prism/components/prism-" + language + ".min.js");
 			if (url != null)
 				buf.append("<script src=\"").append(url).append("\"></script>\n");
 		}
@@ -222,8 +222,7 @@ class WebViewPreview
 			return;
 
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-				WebViewPreview.class.getResourceAsStream("prism/lang_dependencies.txt"))))
-		{
+			WebViewPreview.class.getResourceAsStream("prism/lang_dependencies.txt")))) {
 			String line;
 			while ((line = reader.readLine()) != null) {
 				if (!line.startsWith("{"))
