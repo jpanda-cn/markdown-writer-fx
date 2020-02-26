@@ -27,14 +27,6 @@
 
 package org.markdownwriterfx;
 
-import static org.fxmisc.wellbehaved.event.EventPattern.keyPressed;
-import static org.fxmisc.wellbehaved.event.InputMap.consume;
-import java.io.File;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.prefs.Preferences;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -60,13 +52,22 @@ import org.markdownwriterfx.projects.ProjectManager;
 import org.markdownwriterfx.util.PrefsBooleanProperty;
 import org.markdownwriterfx.util.Utils;
 
+import java.io.File;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.prefs.Preferences;
+
+import static org.fxmisc.wellbehaved.event.EventPattern.keyPressed;
+import static org.fxmisc.wellbehaved.event.InputMap.consume;
+
 /**
  * Tab pane for file editors.
  *
  * @author Karl Tauber
  */
-class FileEditorTabPane
-{
+class FileEditorTabPane {
 	private final MainWindow mainWindow;
 	private final TabPane tabPane;
 	private final ReadOnlyObjectWrapper<FileEditor> activeFileEditor = new ReadOnlyObjectWrapper<>();
@@ -97,7 +98,7 @@ class FileEditorTabPane
 		ChangeListener<Boolean> modifiedListener = (observable, oldValue, newValue) -> {
 			boolean modified = false;
 			for (Tab tab : tabPane.getTabs()) {
-				if (((FileEditor)tab.getUserData()).isModified()) {
+				if (((FileEditor) tab.getUserData()).isModified()) {
 					modified = true;
 					break;
 				}
@@ -108,12 +109,12 @@ class FileEditorTabPane
 			while (c.next()) {
 				if (c.wasAdded()) {
 					for (Tab tab : c.getAddedSubList())
-						((FileEditor)tab.getUserData()).modifiedProperty().addListener(modifiedListener);
+						((FileEditor) tab.getUserData()).modifiedProperty().addListener(modifiedListener);
 				}
 				if (c.wasRemoved()) {
 					for (Tab tab : c.getRemoved()) {
-						((FileEditor)tab.getUserData()).modifiedProperty().removeListener(modifiedListener);
-						((FileEditor)tab.getUserData()).dispose();
+						((FileEditor) tab.getUserData()).modifiedProperty().removeListener(modifiedListener);
+						((FileEditor) tab.getUserData()).dispose();
 					}
 				}
 			}
@@ -146,7 +147,10 @@ class FileEditorTabPane
 	}
 
 	// 'activeFileEditor' property
-	FileEditor getActiveFileEditor() { return activeFileEditor.get(); }
+	FileEditor getActiveFileEditor() {
+		return activeFileEditor.get();
+	}
+
 	ReadOnlyObjectProperty<FileEditor> activeFileEditorProperty() {
 		return activeFileEditor.getReadOnlyProperty();
 	}
@@ -318,7 +322,8 @@ class FileEditorTabPane
 		// register first characters of Yes and No buttons as keys to close the alert
 		for (ButtonType buttonType : Arrays.asList(ButtonType.YES, ButtonType.NO)) {
 			Nodes.addInputMap(alert.getDialogPane(),
-				consume(keyPressed(KeyCode.getKeyCode(buttonType.getText().substring(0, 1).toUpperCase())), e -> {
+				// Fixed NPE when  language is not English ,2020-2-26 13:41:23
+				consume(keyPressed(KeyCode.getKeyCode(buttonType.getButtonData().getTypeCode().substring(0, 1).toUpperCase())), e -> {
 					if (!e.isConsumed()) {
 						alert.setResult(buttonType);
 						alert.close();
@@ -367,7 +372,7 @@ class FileEditorTabPane
 		Tab tab = fileEditor.getTab();
 
 		if (save) {
-			Event event = new Event(tab,tab,Tab.TAB_CLOSE_REQUEST_EVENT);
+			Event event = new Event(tab, tab, Tab.TAB_CLOSE_REQUEST_EVENT);
 			Event.fireEvent(tab, event);
 			if (event.isConsumed())
 				return false;

@@ -116,8 +116,6 @@ public class SmartEdit
 			consume(keyPressed(F, SHORTCUT_DOWN, SHIFT_DOWN, ALT_DOWN),	smartFormat::format)
 		));
 
-//		textArea.selectionProperty().addListener((ob, o, n) ->
-//			System.out.println(findNodes(n.getStart(), n.getEnd(), (s, e, node) -> true, true)));
 
 		editor.markdownASTProperty().addListener((ob, o, n) -> updateStateProperties());
 		textArea.selectionProperty().addListener((ob, o, n) -> updateStateProperties());

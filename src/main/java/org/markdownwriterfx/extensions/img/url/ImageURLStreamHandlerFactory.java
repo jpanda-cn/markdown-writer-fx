@@ -1,6 +1,7 @@
-package org.markdownwriterfx.url;
+package org.markdownwriterfx.extensions.img.url;
 
 
+import java.net.URL;
 import java.net.URLStreamHandler;
 import java.net.URLStreamHandlerFactory;
 
@@ -14,6 +15,8 @@ public class ImageURLStreamHandlerFactory implements URLStreamHandlerFactory {
 	public static final String DEFAULT_HTTPS_KEY = "imgs";
 	private String httpKey;
 	private String httpsKey;
+
+	private static volatile boolean isRegistry = false;
 
 	public ImageURLStreamHandlerFactory() {
 		this(DEFAULT_HTTP_KEY, DEFAULT_HTTPS_KEY);
@@ -33,5 +36,26 @@ public class ImageURLStreamHandlerFactory implements URLStreamHandlerFactory {
 			return new ImageURLStreamHandler(true);
 		}
 		return null;
+	}
+
+
+	public static void registrySelf() {
+		if (isRegistry) {
+			return;
+		}
+		synchronized (ImageURLStreamHandlerFactory.class) {
+			URL.setURLStreamHandlerFactory(new ImageURLStreamHandlerFactory());
+			isRegistry = true;
+		}
+	}
+
+	public static void registrySelf(String httpKey, String httpsKey) {
+		if (isRegistry) {
+			return;
+		}
+		synchronized (ImageURLStreamHandlerFactory.class) {
+			URL.setURLStreamHandlerFactory(new ImageURLStreamHandlerFactory(httpKey, httpsKey));
+			isRegistry = true;
+		}
 	}
 }

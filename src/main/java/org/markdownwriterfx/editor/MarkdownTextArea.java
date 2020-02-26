@@ -27,35 +27,31 @@
 
 package org.markdownwriterfx.editor;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.BiConsumer;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.IndexRange;
 import org.fxmisc.richtext.GenericStyledArea;
 import org.fxmisc.richtext.StyledTextArea;
 import org.fxmisc.richtext.TextExt;
-import org.fxmisc.richtext.model.PlainTextChange;
-import org.fxmisc.richtext.model.SegmentOps;
-import org.fxmisc.richtext.model.StyleSpans;
-import org.fxmisc.richtext.model.StyledDocument;
-import org.fxmisc.richtext.model.StyledSegment;
+import org.fxmisc.richtext.model.*;
+import org.markdownwriterfx.addons.GenericStyledAreaAddon;
+import org.markdownwriterfx.addons.SmartFormatAddon;
 import org.reactfx.Guard;
 import org.reactfx.util.Either;
 import org.reactfx.value.SuspendableVal;
 import org.reactfx.value.Val;
+
+import java.util.*;
+import java.util.function.BiConsumer;
 
 /**
  * Markdown text area.
  *
  * @author Karl Tauber
  */
-class MarkdownTextArea
-	extends GenericStyledArea<Collection<String>, Either<String, EmbeddedImage>, Collection<String>>
-{
+public class MarkdownTextArea
+	extends GenericStyledArea<Collection<String>, Either<String, EmbeddedImage>, Collection<String>> {
+	private static final ServiceLoader<GenericStyledAreaAddon> addons = ServiceLoader.load(GenericStyledAreaAddon.class);
 	// suspendable scrollY value to reduce enormous amount of change events on estimatedScrollY and totalHeightEstimate
 	final SuspendableVal<Double> scrollY;
 	private Guard scrollYguard;
@@ -69,22 +65,27 @@ class MarkdownTextArea
 			/* preserveStyle */ false,
 			/* nodeFactory */ seg -> createNode(seg,
 				(text, styleClasses) -> text.getStyleClass().addAll(styleClasses))
-			);
-
+		);
+		
 		// compute scrollY
 		scrollY = Val.create(() -> {
 			double value = estimatedScrollYProperty().getValue().doubleValue();
 			double maxValue = totalHeightEstimateProperty().getOrElse(0.).doubleValue() - getHeight();
 			return (maxValue > 0) ? Math.min(Math.max(value / maxValue, 0), 1) : 0;
 		}, estimatedScrollYProperty(), totalHeightEstimateProperty()).suspendable();
-	}
 
+
+	}
+public void  addAddons(){
+	for (GenericStyledAreaAddon g : addons) {
+		g.apply(this);
+	}
+}
 	private static Node createNode(StyledSegment<Either<String, EmbeddedImage>, Collection<String>> seg,
-			BiConsumer<? super TextExt, Collection<String>> applyStyle)
-	{
+								   BiConsumer<? super TextExt, Collection<String>> applyStyle) {
 		return seg.getSegment().unify(
-				text -> StyledTextArea.createStyledTextNode(text, seg.getStyle(), applyStyle),
-				EmbeddedImage::createNode);
+			text -> StyledTextArea.createStyledTextNode(text, seg.getStyle(), applyStyle),
+			EmbeddedImage::createNode);
 	}
 
 	@Override
@@ -131,7 +132,7 @@ class MarkdownTextArea
 			// also layout children here to avoid unnecessary scrollY events when laying out VirtualFlow
 			for (Node child : getChildren()) {
 				if (child instanceof Parent)
-					((Parent)child).layout();
+					((Parent) child).layout();
 			}
 		});
 

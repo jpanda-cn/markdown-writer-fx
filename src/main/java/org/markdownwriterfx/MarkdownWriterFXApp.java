@@ -38,7 +38,6 @@ import javafx.stage.Stage;
 import org.fxmisc.cssfx.CSSFX;
 import org.fxmisc.cssfx.api.URIToPathConverter;
 import org.markdownwriterfx.options.Options;
-import org.markdownwriterfx.url.ImageURLStreamHandlerFactory;
 import org.markdownwriterfx.util.StageState;
 
 /**
@@ -56,7 +55,6 @@ public class MarkdownWriterFXApp
 	private StageState stageState;
 
 	public static void main(String[] args) {
-		URL.setURLStreamHandlerFactory(new ImageURLStreamHandlerFactory());
 		launch(args);
 	}
 
@@ -91,7 +89,10 @@ public class MarkdownWriterFXApp
 				new Image("org/markdownwriterfx/markdownwriterfx128.png"));
 		primaryStage.setTitle("Markdown Writer FX");
 		primaryStage.setScene(mainWindow.getScene());
+		// show front
+		primaryStage.setAlwaysOnTop(true);
 		primaryStage.show();
+		primaryStage.setAlwaysOnTop(false);
 	}
 
 	public static void showDocument(String uri) {

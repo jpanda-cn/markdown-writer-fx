@@ -27,21 +27,22 @@
 
 package org.markdownwriterfx.editor;
 
-import java.util.function.IntFunction;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import org.reactfx.collection.LiveList;
 import org.reactfx.value.Val;
 
+import java.util.function.IntFunction;
+
 /**
+ *
  * @author Karl Tauber
  */
 class LineNumberGutterFactory
-	implements IntFunction<Node>
-{
-    private final MarkdownTextArea textArea;
-    private final Val<Integer> lineCount;
+	implements IntFunction<Node> {
+	private final MarkdownTextArea textArea;
+	private final Val<Integer> lineCount;
 
 	LineNumberGutterFactory(MarkdownTextArea textArea) {
 		this.textArea = textArea;
@@ -55,7 +56,6 @@ class LineNumberGutterFactory
 			int digits = Math.max(3, (int) Math.floor(Math.log10(textArea.getParagraphs().size())) + 1);
 			return String.format("%" + digits + "d", lineNo);
 		});
-
 		Label label = new Label();
 		label.textProperty().bind(text.conditionOnShowing(label));
 		label.setAlignment(Pos.TOP_RIGHT);

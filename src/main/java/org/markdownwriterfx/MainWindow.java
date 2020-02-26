@@ -27,9 +27,6 @@
 
 package org.markdownwriterfx;
 
-import java.text.MessageFormat;
-import java.util.function.Function;
-import java.util.prefs.Preferences;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
@@ -38,35 +35,26 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.event.Event;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
+import javafx.scene.control.*;
 import javafx.scene.control.Alert.AlertType;
-import javafx.scene.control.ButtonBase;
-import javafx.scene.control.ChoiceBox;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.Separator;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.ToggleButton;
-import javafx.scene.control.ToggleGroup;
-import javafx.scene.control.ToolBar;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.Window;
 import javafx.stage.WindowEvent;
 import org.controlsfx.control.PopOver;
 import org.controlsfx.control.PopOver.ArrowLocation;
 import org.markdownwriterfx.editor.MarkdownEditorPane;
+import org.markdownwriterfx.editor.MarkdownTextArea;
 import org.markdownwriterfx.editor.SmartEdit;
+import org.markdownwriterfx.editor.TextSelectStatusUpdater;
 import org.markdownwriterfx.options.MarkdownExtensionsPane;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.options.Options.RendererType;
@@ -77,6 +65,11 @@ import org.markdownwriterfx.projects.ProjectPane;
 import org.markdownwriterfx.util.Action;
 import org.markdownwriterfx.util.ActionUtils;
 import org.markdownwriterfx.util.Utils;
+
+import java.text.MessageFormat;
+import java.util.function.Function;
+import java.util.prefs.Preferences;
+
 import static de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon.*;
 
 /**
@@ -84,8 +77,7 @@ import static de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon.*;
  *
  * @author Karl Tauber
  */
-class MainWindow
-{
+class MainWindow {
 	private final Scene scene;
 	private final ProjectPane projectPane;
 	private final FileEditorTabPane fileEditorTabPane;
@@ -126,6 +118,8 @@ class MainWindow
 		borderPane.setPrefSize(800, 800);
 		borderPane.setTop(createMenuBarAndToolBar());
 		borderPane.setCenter(splitPane);
+		// TODO
+		borderPane.setBottom(createBottomStatusLine());
 
 		scene = new Scene(borderPane);
 		scene.getStylesheets().add("org/markdownwriterfx/MarkdownWriter.css");
@@ -140,8 +134,8 @@ class MainWindow
 				if (!newFocused) {
 					// send an ESC key event to the menubar
 					menuBar.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED,
-							KeyEvent.CHAR_UNDEFINED, "", KeyCode.ESCAPE,
-							false, false, false, false));
+						KeyEvent.CHAR_UNDEFINED, "", KeyCode.ESCAPE,
+						false, false, false, false));
 				}
 			});
 		});
@@ -179,6 +173,42 @@ class MainWindow
 		return scene;
 	}
 
+	private Node createBottomStatusLine() {
+		HBox hBox = new HBox();
+		hBox.setAlignment(Pos.CENTER_RIGHT);
+		hBox.setPadding(new Insets(5, 10, 5, 10));
+
+		Label textSelectLabel = new Label();
+
+		ChangeListener<MarkdownEditorPane> MarkdownEditorPaneChangeListener = ((observable1, oldValue1, newValue) -> {
+			textSelectLabel.textProperty().set("");
+			MarkdownTextArea markdownTextArea = newValue.getTextArea();
+			TextSelectStatusUpdater.of(textSelectLabel.textProperty()).apply(markdownTextArea);
+
+		});
+
+
+		FileEditor fileEditor = fileEditorTabPane.getActiveFileEditor();
+		if (fileEditor != null) {
+			if (fileEditor.getEditor() == null) {
+				fileEditor.editorProperty().addListener(MarkdownEditorPaneChangeListener);
+			} else {
+				TextSelectStatusUpdater.of(textSelectLabel.textProperty()).apply(fileEditor.getEditor().getTextArea());
+			}
+		}
+
+
+		fileEditorTabPane.activeFileEditorProperty().addListener((observable, oldValue, newEditor) -> {
+			if (newEditor!=null){
+				newEditor.editorProperty().addListener(MarkdownEditorPaneChangeListener);
+			}
+		});
+
+		hBox.getChildren().addAll(textSelectLabel);
+
+		return hBox;
+	}
+
 	private Node createMenuBarAndToolBar() {
 		BooleanBinding activeFileEditorIsNull = fileEditorTabPane.activeFileEditorProperty().isNull();
 
@@ -189,126 +219,126 @@ class MainWindow
 		Action fileCloseAction = new Action(Messages.get("MainWindow.fileCloseAction"), "Shortcut+W", null, e -> fileClose(), activeFileEditorIsNull);
 		Action fileCloseAllAction = new Action(Messages.get("MainWindow.fileCloseAllAction"), null, null, e -> fileCloseAll(), activeFileEditorIsNull);
 		Action fileSaveAction = new Action(Messages.get("MainWindow.fileSaveAction"), "Shortcut+S", FLOPPY_ALT, e -> fileSave(),
-				createActiveBooleanProperty(FileEditor::modifiedProperty).not());
+			createActiveBooleanProperty(FileEditor::modifiedProperty).not());
 		Action fileSaveAsAction = new Action(Messages.get("MainWindow.fileSaveAsAction"), null, null, e -> fileSaveAs(),
-				activeFileEditorIsNull.or(createActiveBooleanProperty(FileEditor::readOnlyProperty)));
+			activeFileEditorIsNull.or(createActiveBooleanProperty(FileEditor::readOnlyProperty)));
 		Action fileSaveAllAction = new Action(Messages.get("MainWindow.fileSaveAllAction"), "Shortcut+Shift+S", null, e -> fileSaveAll(),
-				Bindings.not(fileEditorTabPane.anyFileEditorModifiedProperty()));
+			Bindings.not(fileEditorTabPane.anyFileEditorModifiedProperty()));
 		Action fileExitAction = new Action(Messages.get("MainWindow.fileExitAction"), null, null, e -> fileExit());
 
 		// Edit actions
 		Action editUndoAction = new Action(Messages.get("MainWindow.editUndoAction"), "Shortcut+Z", UNDO,
-				e -> getActiveEditor().undo(),
-				createActiveBooleanProperty(FileEditor::canUndoProperty).not());
+			e -> getActiveEditor().undo(),
+			createActiveBooleanProperty(FileEditor::canUndoProperty).not());
 		Action editRedoAction = new Action(Messages.get("MainWindow.editRedoAction"), "Shortcut+Y", REPEAT,
-				e -> getActiveEditor().redo(),
-				createActiveBooleanProperty(FileEditor::canRedoProperty).not());
+			e -> getActiveEditor().redo(),
+			createActiveBooleanProperty(FileEditor::canRedoProperty).not());
 		Action editCutAction = new Action(Messages.get("MainWindow.editCutAction"), "Shortcut+X", CUT,
-				e -> getActiveEditor().cut(),
-				activeFileEditorIsNull);
+			e -> getActiveEditor().cut(),
+			activeFileEditorIsNull);
 		Action editCopyAction = new Action(Messages.get("MainWindow.editCopyAction"), "Shortcut+C", COPY,
-				e -> getActiveEditor().copy(),
-				activeFileEditorIsNull);
+			e -> getActiveEditor().copy(),
+			activeFileEditorIsNull);
 		Action editPasteAction = new Action(Messages.get("MainWindow.editPasteAction"), "Shortcut+V", PASTE,
-				e -> getActiveEditor().paste(),
-				activeFileEditorIsNull);
+			e -> getActiveEditor().paste(),
+			activeFileEditorIsNull);
 		Action editSelectAllAction = new Action(Messages.get("MainWindow.editSelectAllAction"), "Shortcut+A", null,
-				e -> getActiveEditor().selectAll(),
-				activeFileEditorIsNull);
+			e -> getActiveEditor().selectAll(),
+			activeFileEditorIsNull);
 		Action editFindAction = new Action(Messages.get("MainWindow.editFindAction"), "Shortcut+F", SEARCH,
-				e -> getActiveEditor().find(false),
-				activeFileEditorIsNull);
+			e -> getActiveEditor().find(false),
+			activeFileEditorIsNull);
 		Action editReplaceAction = new Action(Messages.get("MainWindow.editReplaceAction"), "Shortcut+H", RETWEET,
-				e -> getActiveEditor().find(true),
-				activeFileEditorIsNull);
+			e -> getActiveEditor().find(true),
+			activeFileEditorIsNull);
 		Action editFindNextAction = new Action(Messages.get("MainWindow.editFindNextAction"), "F3", null,
-				e -> getActiveEditor().findNextPrevious(true),
-				activeFileEditorIsNull);
+			e -> getActiveEditor().findNextPrevious(true),
+			activeFileEditorIsNull);
 		Action editFindPreviousAction = new Action(Messages.get("MainWindow.editFindPreviousAction"), "Shift+F3", null,
-				e -> getActiveEditor().findNextPrevious(false),
-				activeFileEditorIsNull);
+			e -> getActiveEditor().findNextPrevious(false),
+			activeFileEditorIsNull);
 
 		Action editFormatAllAction = new Action(Messages.get("MainWindow.editFormatAll"), "Shortcut+Shift+F", null,
-				e -> getActiveSmartEdit().format(false, null),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().format(false, null),
+			activeFileEditorIsNull);
 		Action editFormatSelectionAction = new Action(Messages.get("MainWindow.editFormatSelection"), "Shortcut+Shift+Alt+F", null,
-				e -> getActiveSmartEdit().format(true, null),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().format(true, null),
+			activeFileEditorIsNull);
 
 		// View actions
 		Action viewPreviewAction = new Action(Messages.get("MainWindow.viewPreviewAction"), null, EYE,
-				null, null, fileEditorTabPane.previewVisible);
+			null, null, fileEditorTabPane.previewVisible);
 		Action viewHtmlSourceAction = new Action(Messages.get("MainWindow.viewHtmlSourceAction"), null, HTML5,
-				null, null, fileEditorTabPane.htmlSourceVisible);
+			null, null, fileEditorTabPane.htmlSourceVisible);
 		Action viewMarkdownAstAction = new Action(Messages.get("MainWindow.viewMarkdownAstAction"), null, SITEMAP,
-				null, null, fileEditorTabPane.markdownAstVisible);
+			null, null, fileEditorTabPane.markdownAstVisible);
 		Action viewExternalAction = MarkdownPreviewPane.hasExternalPreview()
 			? new Action(Messages.get("MainWindow.viewExternalAction"), null, EXTERNAL_LINK,
-		        null, null, fileEditorTabPane.externalVisible)
+			null, null, fileEditorTabPane.externalVisible)
 			: null;
 		Action viewShowLineNoAction = new Action(Messages.get("MainWindow.viewShowLineNoAction"), null, null,
-				null, null, Options.showLineNoProperty());
+			null, null, Options.showLineNoProperty());
 		Action viewShowWhitespaceAction = new Action(Messages.get("MainWindow.viewShowWhitespaceAction"), "Alt+W", null,
-				null, null, Options.showWhitespaceProperty());
+			null, null, Options.showWhitespaceProperty());
 		Action viewShowImagesEmbeddedAction = new Action(Messages.get("MainWindow.viewShowImagesEmbeddedAction"), "Alt+I", null,
-				null, null, Options.showImagesEmbeddedProperty());
+			null, null, Options.showImagesEmbeddedProperty());
 
 		// Insert actions
 		Action insertBoldAction = new Action(Messages.get("MainWindow.insertBoldAction"), "Shortcut+B", BOLD,
-				e -> getActiveSmartEdit().insertBold(Messages.get("MainWindow.insertBoldText")),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertBold(Messages.get("MainWindow.insertBoldText")),
+			activeFileEditorIsNull);
 		Action insertItalicAction = new Action(Messages.get("MainWindow.insertItalicAction"), "Shortcut+I", ITALIC,
-				e -> getActiveSmartEdit().insertItalic(Messages.get("MainWindow.insertItalicText")),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertItalic(Messages.get("MainWindow.insertItalicText")),
+			activeFileEditorIsNull);
 		Action insertStrikethroughAction = new Action(Messages.get("MainWindow.insertStrikethroughAction"), "Shortcut+T", STRIKETHROUGH,
-				e -> getActiveSmartEdit().insertStrikethrough(Messages.get("MainWindow.insertStrikethroughText")),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertStrikethrough(Messages.get("MainWindow.insertStrikethroughText")),
+			activeFileEditorIsNull);
 		Action insertCodeAction = new Action(Messages.get("MainWindow.insertCodeAction"), "Shortcut+K", CODE,
-				e -> getActiveSmartEdit().insertInlineCode(Messages.get("MainWindow.insertCodeText")),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertInlineCode(Messages.get("MainWindow.insertCodeText")),
+			activeFileEditorIsNull);
 
 		Action insertLinkAction = new Action(Messages.get("MainWindow.insertLinkAction"), "Shortcut+L", LINK,
-				e -> getActiveSmartEdit().insertLink(),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertLink(),
+			activeFileEditorIsNull);
 		Action insertImageAction = new Action(Messages.get("MainWindow.insertImageAction"), "Shortcut+G", PICTURE_ALT,
-				e -> getActiveSmartEdit().insertImage(),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertImage(),
+			activeFileEditorIsNull);
 
 		Action insertUnorderedListAction = new Action(Messages.get("MainWindow.insertUnorderedListAction"), "Shortcut+U", LIST_UL,
-				e -> getActiveSmartEdit().insertUnorderedList(),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertUnorderedList(),
+			activeFileEditorIsNull);
 		Action insertOrderedListAction = new Action(Messages.get("MainWindow.insertOrderedListAction"), "Shortcut+Shift+U", LIST_OL,
-				e -> getActiveSmartEdit().surroundSelection("\n\n1. ", ""),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().surroundSelection("\n\n1. ", ""),
+			activeFileEditorIsNull);
 		Action insertBlockquoteAction = new Action(Messages.get("MainWindow.insertBlockquoteAction"), "Ctrl+Q", QUOTE_LEFT, // not Shortcut+Q because of conflict on Mac
-				e -> getActiveSmartEdit().surroundSelection("\n\n> ", ""),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().surroundSelection("\n\n> ", ""),
+			activeFileEditorIsNull);
 		Action insertFencedCodeBlockAction = new Action(Messages.get("MainWindow.insertFencedCodeBlockAction"), "Shortcut+Shift+K", FILE_CODE_ALT,
-				e -> getActiveSmartEdit().surroundSelection("\n\n```\n", "\n```\n\n", Messages.get("MainWindow.insertFencedCodeBlockText")),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().surroundSelection("\n\n```\n", "\n```\n\n", Messages.get("MainWindow.insertFencedCodeBlockText")),
+			activeFileEditorIsNull);
 
 		Action insertHeader1Action = new Action(Messages.get("MainWindow.insertHeader1Action"), "Shortcut+1", HEADER,
-				e -> getActiveSmartEdit().insertHeading(1, Messages.get("MainWindow.insertHeader1Text")),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertHeading(1, Messages.get("MainWindow.insertHeader1Text")),
+			activeFileEditorIsNull);
 		Action insertHeader2Action = new Action(Messages.get("MainWindow.insertHeader2Action"), "Shortcut+2", HEADER,
-				e -> getActiveSmartEdit().insertHeading(2, Messages.get("MainWindow.insertHeader2Text")),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertHeading(2, Messages.get("MainWindow.insertHeader2Text")),
+			activeFileEditorIsNull);
 		Action insertHeader3Action = new Action(Messages.get("MainWindow.insertHeader3Action"), "Shortcut+3", HEADER,
-				e -> getActiveSmartEdit().insertHeading(3, Messages.get("MainWindow.insertHeader3Text")),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertHeading(3, Messages.get("MainWindow.insertHeader3Text")),
+			activeFileEditorIsNull);
 		Action insertHeader4Action = new Action(Messages.get("MainWindow.insertHeader4Action"), "Shortcut+4", HEADER,
-				e -> getActiveSmartEdit().insertHeading(4, Messages.get("MainWindow.insertHeader4Text")),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertHeading(4, Messages.get("MainWindow.insertHeader4Text")),
+			activeFileEditorIsNull);
 		Action insertHeader5Action = new Action(Messages.get("MainWindow.insertHeader5Action"), "Shortcut+5", HEADER,
-				e -> getActiveSmartEdit().insertHeading(5, Messages.get("MainWindow.insertHeader5Text")),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertHeading(5, Messages.get("MainWindow.insertHeader5Text")),
+			activeFileEditorIsNull);
 		Action insertHeader6Action = new Action(Messages.get("MainWindow.insertHeader6Action"), "Shortcut+6", HEADER,
-				e -> getActiveSmartEdit().insertHeading(6, Messages.get("MainWindow.insertHeader6Text")),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().insertHeading(6, Messages.get("MainWindow.insertHeader6Text")),
+			activeFileEditorIsNull);
 
 		Action insertHorizontalRuleAction = new Action(Messages.get("MainWindow.insertHorizontalRuleAction"), null, null,
-				e -> getActiveSmartEdit().surroundSelection("\n\n---\n\n", ""),
-				activeFileEditorIsNull);
+			e -> getActiveSmartEdit().surroundSelection("\n\n---\n\n", ""),
+			activeFileEditorIsNull);
 
 		// Tools actions
 		Action toolsOptionsAction = new Action(Messages.get("MainWindow.toolsOptionsAction"), "Shortcut+,", null, e -> toolsOptions());
@@ -320,76 +350,76 @@ class MainWindow
 		//---- MenuBar ----
 
 		Menu fileMenu = ActionUtils.createMenu(Messages.get("MainWindow.fileMenu"),
-				fileNewAction,
-				fileOpenAction,
-				fileOpenProjectAction,
-				null,
-				fileCloseAction,
-				fileCloseAllAction,
-				null,
-				fileSaveAction,
-				fileSaveAsAction,
-				fileSaveAllAction,
-				null,
-				fileExitAction);
+			fileNewAction,
+			fileOpenAction,
+			fileOpenProjectAction,
+			null,
+			fileCloseAction,
+			fileCloseAllAction,
+			null,
+			fileSaveAction,
+			fileSaveAsAction,
+			fileSaveAllAction,
+			null,
+			fileExitAction);
 
 		Menu editMenu = ActionUtils.createMenu(Messages.get("MainWindow.editMenu"),
-				editUndoAction,
-				editRedoAction,
-				null,
-				editCutAction,
-				editCopyAction,
-				editPasteAction,
-				editSelectAllAction,
-				null,
-				editFindAction,
-				editReplaceAction,
-				null,
-				editFindNextAction,
-				editFindPreviousAction,
-				null,
-				editFormatAllAction,
-				editFormatSelectionAction);
+			editUndoAction,
+			editRedoAction,
+			null,
+			editCutAction,
+			editCopyAction,
+			editPasteAction,
+			editSelectAllAction,
+			null,
+			editFindAction,
+			editReplaceAction,
+			null,
+			editFindNextAction,
+			editFindPreviousAction,
+			null,
+			editFormatAllAction,
+			editFormatSelectionAction);
 
 		Menu viewMenu = ActionUtils.createMenu(Messages.get("MainWindow.viewMenu"),
-				viewPreviewAction,
-				viewHtmlSourceAction,
-				viewMarkdownAstAction,
-				null,
-				viewShowLineNoAction,
-				viewShowWhitespaceAction,
-				viewShowImagesEmbeddedAction);
+			viewPreviewAction,
+			viewHtmlSourceAction,
+			viewMarkdownAstAction,
+			null,
+			viewShowLineNoAction,
+			viewShowWhitespaceAction,
+			viewShowImagesEmbeddedAction);
 		if (viewExternalAction != null)
 			viewMenu.getItems().add(3, ActionUtils.createMenuItem(viewExternalAction));
 
 		Menu insertMenu = ActionUtils.createMenu(Messages.get("MainWindow.insertMenu"),
-				insertBoldAction,
-				insertItalicAction,
-				insertStrikethroughAction,
-				insertCodeAction,
-				null,
-				insertLinkAction,
-				insertImageAction,
-				null,
-				insertUnorderedListAction,
-				insertOrderedListAction,
-				insertBlockquoteAction,
-				insertFencedCodeBlockAction,
-				null,
-				insertHeader1Action,
-				insertHeader2Action,
-				insertHeader3Action,
-				insertHeader4Action,
-				insertHeader5Action,
-				insertHeader6Action,
-				null,
-				insertHorizontalRuleAction);
+			insertBoldAction,
+			insertItalicAction,
+			insertStrikethroughAction,
+			insertCodeAction,
+			null,
+			insertLinkAction,
+			insertImageAction,
+			null,
+			insertUnorderedListAction,
+			insertOrderedListAction,
+			insertBlockquoteAction,
+			insertFencedCodeBlockAction,
+			null,
+			insertHeader1Action,
+			insertHeader2Action,
+			insertHeader3Action,
+			insertHeader4Action,
+			insertHeader5Action,
+			insertHeader6Action,
+			null,
+			insertHorizontalRuleAction);
 
 		Menu toolsMenu = ActionUtils.createMenu(Messages.get("MainWindow.toolsMenu"),
-				toolsOptionsAction);
+			toolsOptionsAction);
 
 		Menu helpMenu = ActionUtils.createMenu(Messages.get("MainWindow.helpMenu"),
-				helpAboutAction);
+			helpAboutAction);
 
 		menuBar = new MenuBar(fileMenu, editMenu, viewMenu, insertMenu, toolsMenu, helpMenu);
 
@@ -397,27 +427,27 @@ class MainWindow
 		//---- ToolBar ----
 
 		ToolBar toolBar = ActionUtils.createToolBar(
-				fileNewAction,
-				fileOpenAction,
-				fileOpenProjectAction,
-				fileSaveAction,
-				null,
-				editUndoAction,
-				editRedoAction,
-				null,
-				new Action(insertBoldAction, createActiveEditBooleanProperty(SmartEdit::boldProperty)),
-				new Action(insertItalicAction, createActiveEditBooleanProperty(SmartEdit::italicProperty)),
-				new Action(insertCodeAction, createActiveEditBooleanProperty(SmartEdit::codeProperty)),
-				null,
-				new Action(insertLinkAction, createActiveEditBooleanProperty(SmartEdit::linkProperty)),
-				new Action(insertImageAction, createActiveEditBooleanProperty(SmartEdit::imageProperty)),
-				null,
-				new Action(insertUnorderedListAction, createActiveEditBooleanProperty(SmartEdit::unorderedListProperty)),
-				new Action(insertOrderedListAction, createActiveEditBooleanProperty(SmartEdit::orderedListProperty)),
-				new Action(insertBlockquoteAction, createActiveEditBooleanProperty(SmartEdit::blockquoteProperty)),
-				new Action(insertFencedCodeBlockAction, createActiveEditBooleanProperty(SmartEdit::fencedCodeProperty)),
-				null,
-				new Action(insertHeader1Action, createActiveEditBooleanProperty(SmartEdit::headerProperty)));
+			fileNewAction,
+			fileOpenAction,
+			fileOpenProjectAction,
+			fileSaveAction,
+			null,
+			editUndoAction,
+			editRedoAction,
+			null,
+			new Action(insertBoldAction, createActiveEditBooleanProperty(SmartEdit::boldProperty)),
+			new Action(insertItalicAction, createActiveEditBooleanProperty(SmartEdit::italicProperty)),
+			new Action(insertCodeAction, createActiveEditBooleanProperty(SmartEdit::codeProperty)),
+			null,
+			new Action(insertLinkAction, createActiveEditBooleanProperty(SmartEdit::linkProperty)),
+			new Action(insertImageAction, createActiveEditBooleanProperty(SmartEdit::imageProperty)),
+			null,
+			new Action(insertUnorderedListAction, createActiveEditBooleanProperty(SmartEdit::unorderedListProperty)),
+			new Action(insertOrderedListAction, createActiveEditBooleanProperty(SmartEdit::orderedListProperty)),
+			new Action(insertBlockquoteAction, createActiveEditBooleanProperty(SmartEdit::blockquoteProperty)),
+			new Action(insertFencedCodeBlockAction, createActiveEditBooleanProperty(SmartEdit::fencedCodeProperty)),
+			null,
+			new Action(insertHeader1Action, createActiveEditBooleanProperty(SmartEdit::headerProperty)));
 
 		// horizontal spacer
 		Region spacer = new Region();
@@ -440,30 +470,30 @@ class MainWindow
 		// markdown extensions popover
 		String title = Messages.get("MainWindow.MarkdownExtensions");
 		extensionsButton = ActionUtils.createToolBarButton(
-				new Action(title, null, COG, e -> {
-					PopOver popOver = new PopOver();
-					popOver.setTitle(title);
-					popOver.setHeaderAlwaysVisible(true);
-					popOver.setArrowLocation(ArrowLocation.TOP_CENTER);
-					popOver.setContentNode(new MarkdownExtensionsPane(true));
-					popOver.show(extensionsButton);
-				}));
+			new Action(title, null, COG, e -> {
+				PopOver popOver = new PopOver();
+				popOver.setTitle(title);
+				popOver.setHeaderAlwaysVisible(true);
+				popOver.setArrowLocation(ArrowLocation.TOP_CENTER);
+				popOver.setContentNode(new MarkdownExtensionsPane(true));
+				popOver.show(extensionsButton);
+			}));
 		toolBar.getItems().add(extensionsButton);
 		toolBar.getItems().add(new Separator());
 
 		// preview actions
 		Node[] previewButtons = ActionUtils.createToolBarButtons(
-				viewPreviewAction,
-				viewHtmlSourceAction,
-				viewMarkdownAstAction);
+			viewPreviewAction,
+			viewHtmlSourceAction,
+			viewMarkdownAstAction);
 		ToggleGroup viewGroup = new ToggleGroup();
 		for (Node n : previewButtons)
-			((ToggleButton)n).setToggleGroup(viewGroup);
+			((ToggleButton) n).setToggleGroup(viewGroup);
 		toolBar.getItems().addAll(previewButtons);
 
 		if (viewExternalAction != null) {
 			ButtonBase externalPreviewButton = ActionUtils.createToolBarButton(viewExternalAction);
-			((ToggleButton)externalPreviewButton).setToggleGroup(viewGroup);
+			((ToggleButton) externalPreviewButton).setToggleGroup(viewGroup);
 			toolBar.getItems().add(externalPreviewButton);
 		}
 
@@ -531,8 +561,7 @@ class MainWindow
 	}
 
 	Alert createAlert(AlertType alertType, String title,
-		String contentTextFormat, Object... contentTextArgs)
-	{
+					  String contentTextFormat, Object... contentTextArgs) {
 		Alert alert = new Alert(alertType);
 		alert.setTitle(title);
 		alert.setHeaderText(null);

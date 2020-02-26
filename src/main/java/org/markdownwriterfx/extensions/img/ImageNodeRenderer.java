@@ -15,6 +15,7 @@ import com.vladsch.flexmark.util.html.Attributes;
 import com.vladsch.flexmark.util.sequence.Escaping;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.markdownwriterfx.extensions.img.url.ImageURLStreamHandlerFactory;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -30,10 +31,17 @@ import static com.vladsch.flexmark.html.renderer.LinkStatus.UNKNOWN;
 public class ImageNodeRenderer implements NodeRenderer {
 	final private ReferenceRepository referenceRepository;
 	final private boolean recheckUndefinedReferences;
+	final private ImageOptions imageOptions;
 
 	public ImageNodeRenderer(DataHolder options) {
 		referenceRepository = Parser.REFERENCES.get(options);
 		recheckUndefinedReferences = HtmlRenderer.RECHECK_UNDEFINED_REFERENCES.get(options);
+		imageOptions = new ImageOptions(options);
+		init();
+	}
+
+	protected void init() {
+		ImageURLStreamHandlerFactory.registrySelf(imageOptions.customHttpProtocol, imageOptions.customHttpsProtocol);
 	}
 
 	@Override
@@ -127,7 +135,7 @@ public class ImageNodeRenderer implements NodeRenderer {
 
 	public String handlerUrl(String url) {
 		if (url.startsWith("http")) {
-			return url.replaceFirst("http", "img");
+			return url.replaceFirst("http", imageOptions.customHttpProtocol);
 		}
 		return url;
 	}

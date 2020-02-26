@@ -536,4 +536,8 @@ public class MarkdownEditorPane
 		event.setDropCompleted(true);
 		event.consume();
 	}
+
+	public MarkdownTextArea getTextArea() {
+		return textArea;
+	}
 }

@@ -1,4 +1,4 @@
-package org.markdownwriterfx.url;
+package org.markdownwriterfx.extensions.img.url;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;

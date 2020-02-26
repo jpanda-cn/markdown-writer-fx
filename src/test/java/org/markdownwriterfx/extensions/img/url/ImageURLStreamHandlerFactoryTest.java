@@ -1,11 +1,10 @@
-package org.markdownwriterfx.url;
+package org.markdownwriterfx.extensions.img.url;
 
 import org.junit.Test;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.net.URL;
-import java.net.URLDecoder;
 import java.nio.file.Paths;
 
 /**

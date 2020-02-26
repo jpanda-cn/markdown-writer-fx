@@ -128,7 +128,7 @@ class FileEditor
 		return tab;
 	}
 
-	MarkdownEditorPane getEditor() {
+	public MarkdownEditorPane getEditor() {
 		return markdownEditorPane;
 	}
 
