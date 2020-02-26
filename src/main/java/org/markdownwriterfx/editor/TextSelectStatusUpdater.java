@@ -22,6 +22,7 @@ public class TextSelectStatusUpdater {
 	}
 
 	public void apply(MarkdownTextArea area) {
+
 		area.selectionProperty().addListener((ob, o, n) -> {
 			int startLine = offsetToLine(area, n.getStart());
 			int endLine = offsetToLine(area, n.getEnd());
@@ -56,6 +57,7 @@ public class TextSelectStatusUpdater {
 
 			content.append(String.format("%d : %d ", line+1, charAt+1));
 			selectChars.set(content.toString());
+
 		});
 
 	}

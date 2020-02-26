@@ -27,41 +27,24 @@
 
 package org.markdownwriterfx.editor;
 
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyCombination.*;
-import static org.fxmisc.wellbehaved.event.EventPattern.keyPressed;
-import static org.fxmisc.wellbehaved.event.InputMap.*;
-import java.io.File;
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
+import com.vladsch.flexmark.parser.Parser;
+import com.vladsch.flexmark.util.ast.Block;
+import com.vladsch.flexmark.util.ast.Node;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
-import javafx.scene.input.ContextMenuEvent;
-import javafx.scene.input.DragEvent;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.TransferMode;
-import com.vladsch.flexmark.util.ast.Node;
-import com.vladsch.flexmark.parser.Parser;
+import javafx.scene.input.*;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.Caret.CaretVisibility;
 import org.fxmisc.richtext.CaretNode;
 import org.fxmisc.richtext.CharacterHit;
+import org.fxmisc.richtext.model.StyledDocument;
 import org.fxmisc.undo.UndoManager;
 import org.fxmisc.wellbehaved.event.Nodes;
 import org.markdownwriterfx.controls.BottomSlidePane;
@@ -69,16 +52,31 @@ import org.markdownwriterfx.editor.FindReplacePane.HitsChangeListener;
 import org.markdownwriterfx.editor.MarkdownSyntaxHighlighter.ExtraStyledRanges;
 import org.markdownwriterfx.options.MarkdownExtensions;
 import org.markdownwriterfx.options.Options;
+import org.markdownwriterfx.preview.MarkdownPreviewPane;
+import org.reactfx.util.Either;
+
+import java.io.File;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+
+import static javafx.scene.input.KeyCode.*;
+import static javafx.scene.input.KeyCombination.ALT_DOWN;
+import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
+import static org.fxmisc.wellbehaved.event.EventPattern.keyPressed;
+import static org.fxmisc.wellbehaved.event.InputMap.consume;
+import static org.fxmisc.wellbehaved.event.InputMap.sequence;
 
 /**
  * Markdown editor pane.
- *
+ * <p>
  * Uses flexmark-java (https://github.com/vsch/flexmark-java) for parsing markdown.
  *
  * @author Karl Tauber
  */
-public class MarkdownEditorPane
-{
+public class MarkdownEditorPane {
 	private final BottomSlidePane borderPane;
 	private final MarkdownTextArea textArea;
 	private final ParagraphOverlayGraphicFactory overlayGraphicFactory;
@@ -94,8 +92,69 @@ public class MarkdownEditorPane
 	private final InvalidationListener optionsListener;
 	private String lineSeparator = getLineSeparatorOrDefault();
 
+	private boolean isInNode(int start, int end, Node node) {
+		if (end == start) {
+			end++;
+		}
+		return (start <= node.getStartOffset() && end >= node.getStartOffset())
+			||
+			(end >= node.getStartOffset() && end <= node.getEndOffset());
+//		return start <= node.getStartOffset() && end >= node.getEndOffset();
+	}
+
+	private List<Node> getParagraph(int start, int end, Node root, List<Node> nodes) {
+
+		if (isInNode(start, end, root) && root instanceof Block) {
+			// find in child
+			List<Node> seqNodes = new ArrayList<>();
+			for (Node child = root.getFirstChild(); child != null; child = child.getNext()) {
+				if (isInNode(start, end, child) && child instanceof Block) {
+					seqNodes.add(child);
+				}
+			}
+			if (seqNodes.size() == 1) {
+				// split
+				return getParagraph(start, end, seqNodes.get(0), seqNodes);
+			} else if (seqNodes.size() > 0) {
+				// not split
+				return seqNodes;
+			}
+		}
+		return nodes;
+	}
+
+	private MarkdownPreviewPane markdownPreviewPane;
+
+	public void setMarkdownPreviewPane(MarkdownPreviewPane markdownPreviewPane) {
+		this.markdownPreviewPane = markdownPreviewPane;
+	}
+
 	public MarkdownEditorPane() {
-		textArea = new MarkdownTextArea();
+		textArea = new MarkdownTextArea() {
+			@Override
+			public void replace(int start, int end, StyledDocument<Collection<String>, Either<String, EmbeddedImage>, Collection<String>> replacement) {
+				List<Node> p = MarkdownEditorPane.this.getParagraph(start, end, markdownAST.get(), null);
+				System.out.println(p);
+				if (p != null) {
+					for (Node n : p) {
+						// wait delete
+//						System.out.println(markdownPreviewPane.getActiveRenderer().getHtml(n));
+						System.out.println(String.format("document.getElementById(%s)", String.format("%s@%d", n.getNodeName(), n.hashCode())));
+					}
+				}
+				super.replace(start, end, replacement);
+				List<Node> p2 = MarkdownEditorPane.this.getParagraph(start, start + replacement.length(), markdownAST.get(), null);
+				System.out.println(p2);
+				if (p2 != null) {
+					for (Node n : p2) {
+						if (markdownPreviewPane.getActiveRenderer() != null) {
+							System.out.println(markdownPreviewPane.getActiveRenderer().getHtml(n));
+							// wait added
+						}
+					}
+				}
+			}
+		};
 		textArea.setWrapText(true);
 		textArea.setUseInitialStyleForInsertion(true);
 		textArea.getStyleClass().add("markdown-editor");
@@ -116,11 +175,11 @@ public class MarkdownEditorPane
 		smartEdit = new SmartEdit(this, textArea);
 
 		Nodes.addInputMap(textArea, sequence(
-			consume(keyPressed(PLUS, SHORTCUT_DOWN),	this::increaseFontSize),
-			consume(keyPressed(MINUS, SHORTCUT_DOWN),	this::decreaseFontSize),
-			consume(keyPressed(DIGIT0, SHORTCUT_DOWN),	this::resetFontSize),
-			consume(keyPressed(W, ALT_DOWN),			this::showWhitespace),
-			consume(keyPressed(I, ALT_DOWN),			this::showImagesEmbedded)
+			consume(keyPressed(PLUS, SHORTCUT_DOWN), this::increaseFontSize),
+			consume(keyPressed(MINUS, SHORTCUT_DOWN), this::decreaseFontSize),
+			consume(keyPressed(DIGIT0, SHORTCUT_DOWN), this::resetFontSize),
+			consume(keyPressed(W, ALT_DOWN), this::showWhitespace),
+			consume(keyPressed(I, ALT_DOWN), this::showImagesEmbedded)
 		));
 
 		// create scroll pane
@@ -179,7 +238,7 @@ public class MarkdownEditorPane
 		// workaround a problem with wrong selection after undo:
 		//   after undo the selection is 0-0, anchor is 0, but caret position is correct
 		//   --> set selection to caret position
-		textArea.selectionProperty().addListener((observable,oldSelection,newSelection) -> {
+		textArea.selectionProperty().addListener((observable, oldSelection, newSelection) -> {
 			// use runLater because the wrong selection temporary occurs while edition
 			Platform.runLater(() -> {
 				IndexRange selection = textArea.getSelection();
@@ -188,11 +247,13 @@ public class MarkdownEditorPane
 					textArea.selectRange(caretPosition, caretPosition);
 			});
 		});
+
+
 	}
 
 	private void updateFont() {
 		textArea.setStyle("-fx-font-family: '" + Options.getFontFamily()
-				+ "'; -fx-font-size: " + Options.getFontSize() );
+			+ "'; -fx-font-size: " + Options.getFontSize());
 	}
 
 	public javafx.scene.Node getNode() {
@@ -240,7 +301,7 @@ public class MarkdownEditorPane
 
 	private String getLineSeparatorOrDefault() {
 		String lineSeparator = Options.getLineSeparator();
-		return (lineSeparator != null) ? lineSeparator : System.getProperty( "line.separator", "\n" );
+		return (lineSeparator != null) ? lineSeparator : System.getProperty("line.separator", "\n");
 	}
 
 	private String determineLineSeparator(String str) {
@@ -260,6 +321,7 @@ public class MarkdownEditorPane
 			markdown = markdown.replace("\n", lineSeparator);
 		return markdown;
 	}
+
 	public void setMarkdown(String markdown) {
 		// remember old selection range
 		IndexRange oldSelection = textArea.getSelection();
@@ -269,33 +331,64 @@ public class MarkdownEditorPane
 		textArea.replaceText(markdown);
 
 		// restore old selection range
-        int newLength = textArea.getLength();
-        textArea.selectRange(Math.min(oldSelection.getStart(), newLength), Math.min(oldSelection.getEnd(), newLength));
+		int newLength = textArea.getLength();
+		textArea.selectRange(Math.min(oldSelection.getStart(), newLength), Math.min(oldSelection.getEnd(), newLength));
 	}
-	public ObservableValue<String> markdownProperty() { return textArea.textProperty(); }
+
+	public ObservableValue<String> markdownProperty() {
+		return textArea.textProperty();
+	}
 
 	// 'markdownText' property
 	private final ReadOnlyStringWrapper markdownText = new ReadOnlyStringWrapper();
-	public String getMarkdownText() { return markdownText.get(); }
-	public ReadOnlyStringProperty markdownTextProperty() { return markdownText.getReadOnlyProperty(); }
+
+	public String getMarkdownText() {
+		return markdownText.get();
+	}
+
+	public ReadOnlyStringProperty markdownTextProperty() {
+		return markdownText.getReadOnlyProperty();
+	}
 
 	// 'markdownAST' property
 	private final ReadOnlyObjectWrapper<Node> markdownAST = new ReadOnlyObjectWrapper<>();
-	public Node getMarkdownAST() { return markdownAST.get(); }
-	public ReadOnlyObjectProperty<Node> markdownASTProperty() { return markdownAST.getReadOnlyProperty(); }
+
+	public Node getMarkdownAST() {
+		return markdownAST.get();
+	}
+
+	public ReadOnlyObjectProperty<Node> markdownASTProperty() {
+		return markdownAST.getReadOnlyProperty();
+	}
 
 	// 'selection' property
-	public ObservableValue<IndexRange> selectionProperty() { return textArea.selectionProperty(); }
+	public ObservableValue<IndexRange> selectionProperty() {
+		return textArea.selectionProperty();
+	}
 
 	// 'scrollY' property
-	public double getScrollY() { return textArea.scrollY.getValue(); }
-	public ObservableValue<Double> scrollYProperty() { return textArea.scrollY; }
+	public double getScrollY() {
+		return textArea.scrollY.getValue();
+	}
+
+	public ObservableValue<Double> scrollYProperty() {
+		return textArea.scrollY;
+	}
 
 	// 'path' property
 	private final ObjectProperty<Path> path = new SimpleObjectProperty<>();
-	public Path getPath() { return path.get(); }
-	public void setPath(Path path) { this.path.set(path); }
-	public ObjectProperty<Path> pathProperty() { return path; }
+
+	public Path getPath() {
+		return path.get();
+	}
+
+	public void setPath(Path path) {
+		this.path.set(path);
+	}
+
+	public ObjectProperty<Path> pathProperty() {
+		return path;
+	}
 
 	Path getParentPath() {
 		Path path = getPath();
@@ -339,8 +432,8 @@ public class MarkdownEditorPane
 	private void applyHighlighting(Node astRoot) {
 		List<ExtraStyledRanges> extraStyledRanges = findReplacePane.hasHits()
 			? Arrays.asList(
-				new ExtraStyledRanges("hit", findReplacePane.getHits()),
-				new ExtraStyledRanges("hit-active", Arrays.asList(findReplacePane.getActiveHit())))
+			new ExtraStyledRanges("hit", findReplacePane.getHits()),
+			new ExtraStyledRanges("hit-active", Arrays.asList(findReplacePane.getActiveHit())))
 			: null;
 
 		MarkdownSyntaxHighlighter.highlight(textArea, astRoot, extraStyledRanges);
@@ -493,7 +586,7 @@ public class MarkdownEditorPane
 		}
 
 		// show drag caret
-        dragCaret.setShowCaret(CaretVisibility.ON);
+		dragCaret.setShowCaret(CaretVisibility.ON);
 	}
 
 	private void onDragExited(DragEvent event) {

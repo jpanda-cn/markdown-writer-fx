@@ -43,6 +43,8 @@ import com.vladsch.flexmark.util.html.Attributes;
 import com.vladsch.flexmark.util.sequence.BasedSequence;
 import org.jetbrains.annotations.NotNull;
 import org.markdownwriterfx.addons.PreviewRendererAddon;
+import org.markdownwriterfx.extensions.id.AllHtmlIdGenerator;
+import org.markdownwriterfx.extensions.id.AutoIncrementIdAttributeProvider;
 import org.markdownwriterfx.options.MarkdownExtensions;
 import org.markdownwriterfx.util.Range;
 
@@ -70,6 +72,11 @@ class FlexmarkPreviewRenderer
 	private String htmlPreview;
 	private String htmlSource;
 	private String ast;
+
+	@Override
+	public String getHtml(Node node) {
+		return getHtmlRenderer().render(node);
+	}
 
 	@Override
 	public void update(String markdownText, Node astRoot, Path path) {
@@ -159,6 +166,28 @@ class FlexmarkPreviewRenderer
 		return astRoot2;
 	}
 
+	HtmlRenderer htmlRenderer = null;
+
+	public HtmlRenderer getHtmlRenderer() {
+		if (htmlRenderer == null) {
+			HtmlRenderer.Builder builder = HtmlRenderer.builder();
+			MutableDataSet dataSet = new MutableDataSet();
+			dataSet.set(EmojiExtension.ROOT_IMAGE_PATH, getClass().getResource("emojis/").toString());
+			builder.setAll(dataSet);
+			builder.attributeProviderFactory(new MyAttributeProvider.Factory())
+				.attributeProviderFactory(new AutoIncrementIdAttributeProvider.Factory());
+			builder.htmlIdGeneratorFactory(new AllHtmlIdGenerator.Factory());
+			builder.extensions(MarkdownExtensions.getFlexmarkExtensions());
+
+//		if (!source)
+//			builder.attributeProviderFactory(new MyAttributeProvider.Factory());
+
+			htmlRenderer = builder.build();
+
+		}
+		return htmlRenderer;
+	}
+
 	private String toHtml(boolean source) {
 		Node astRoot;
 		if (addons.iterator().hasNext()) {
@@ -175,24 +204,55 @@ class FlexmarkPreviewRenderer
 
 		if (astRoot == null)
 			return "";
+//		if (!source)
+//			builder.attributeProviderFactory(new MyAttributeProvider.Factory());
 
-		HtmlRenderer.Builder builder = HtmlRenderer.builder();
-		MutableDataSet dataSet = new MutableDataSet();
-		dataSet.set(EmojiExtension.ROOT_IMAGE_PATH, getClass().getResource("emojis/").toString());
-		builder.setAll(dataSet);
-
-		builder.extensions(MarkdownExtensions.getFlexmarkExtensions());
-
-		if (!source)
-			builder.attributeProviderFactory(new MyAttributeProvider.Factory());
-		String html = builder.build().render(astRoot);
-
+		String html = getHtmlRenderer().render(astRoot);
 
 		for (PreviewRendererAddon addon : addons)
 			html = addon.postRender(html, path);
 
+
 		return html;
 	}
+
+
+//	private boolean pn(Node node, Node node2, Map<Node, Node> diffs) {
+//		if (node == null && node2 == null) {
+//			return false;
+//		}
+//		if (node==null){
+//
+//		}
+//		if (node.getChars().equals(node2.getChars())) {
+//			return true;
+//		}
+//		// no same
+//
+//		boolean isDelOrReplace = node.getTextLength() >= node2.getTextLength();
+//		if (isDelOrReplace) {
+//			// pre le next
+//			Node newChild = node.getFirstChild();
+//			for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {
+//				// load child  compare with same child
+//				if (pn(node, newChild, diffs)) {
+//					newChild = newChild.getNext();
+//				}
+//				// not same
+//
+//			}
+//
+//
+//		}
+//
+//
+//		if (node.getChars().equals(node2.getChars())) {
+//			return diffs;
+//		}
+//		diffs.put(node, node2);
+//		return diffs;
+//
+//	}
 
 	private String printTree() {
 		Node astRoot = toAstRoot();

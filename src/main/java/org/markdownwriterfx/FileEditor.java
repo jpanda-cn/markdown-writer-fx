@@ -41,6 +41,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
@@ -222,9 +223,15 @@ class FileEditor
 
 		// load file and create UI when the tab becomes visible the first time
 
-		markdownEditorPane = new MarkdownEditorPane();
 		markdownPreviewPane = new MarkdownPreviewPane();
-
+		markdownEditorPane = new MarkdownEditorPane();
+		editor.addListener(new ChangeListener<MarkdownEditorPane>() {
+			@Override
+			public void changed(ObservableValue<? extends MarkdownEditorPane> observable, MarkdownEditorPane oldValue, MarkdownEditorPane newValue) {
+				newValue.setMarkdownPreviewPane(markdownPreviewPane);
+			}
+		});
+		markdownEditorPane.setMarkdownPreviewPane(markdownPreviewPane);
 		markdownEditorPane.pathProperty().bind(path);
 
 		load();

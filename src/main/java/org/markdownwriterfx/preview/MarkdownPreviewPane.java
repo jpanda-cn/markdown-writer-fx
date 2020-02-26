@@ -27,30 +27,28 @@
 
 package org.markdownwriterfx.preview;
 
-import java.nio.file.Path;
-import java.util.List;
+import com.vladsch.flexmark.util.ast.Node;
 import javafx.application.Platform;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.*;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.control.IndexRange;
 import javafx.scene.layout.BorderPane;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.options.Options.RendererType;
 import org.markdownwriterfx.util.Range;
-import com.vladsch.flexmark.util.ast.Node;
+
+import java.nio.file.Path;
+import java.util.List;
 
 /**
  * Markdown preview pane.
  *
  * @author Karl Tauber
  */
-public class MarkdownPreviewPane
-{
-	public enum Type { None, Web, Source, Ast, External };
+public class MarkdownPreviewPane {
+	public enum Type {None, Web, Source, Ast, External}
+
+	;
 
 	private final BorderPane pane = new BorderPane();
 	private final WebViewPreview webViewPreview = new WebViewPreview();
@@ -63,25 +61,52 @@ public class MarkdownPreviewPane
 	private Renderer activeRenderer;
 	private Preview activePreview;
 
-	interface Renderer {
+	public Renderer getActiveRenderer() {
+		return activeRenderer;
+	}
+
+	public interface EditorRecord {
+
+
+	}
+
+	public interface Renderer {
 		void update(String markdownText, Node astRoot, Path path);
+
 		String getHtml(boolean source);
+
 		String getAST();
+
 		List<Range> findSequences(int startOffset, int endOffset);
+
+		default String getHtml(Node node) {
+			return "";
+		}
+
+		default String getHtml(org.commonmark.node.Node node) {
+			return "";
+		}
 	}
 
 	interface Preview {
 		javafx.scene.Node getNode();
+
 		void update(PreviewContext context, Renderer renderer);
+
 		void scrollY(PreviewContext context, double value);
+
 		void editorSelectionChanged(PreviewContext context, IndexRange range);
 	}
 
 	interface PreviewContext {
 		Renderer getRenderer();
+
 		String getMarkdownText();
+
 		Node getMarkdownAST();
+
 		Path getPath();
+
 		IndexRange getEditorSelection();
 	}
 
@@ -89,16 +114,35 @@ public class MarkdownPreviewPane
 		pane.getStyleClass().add("preview-pane");
 
 		previewContext = new PreviewContext() {
-			@Override public Renderer getRenderer() { return activeRenderer; }
-			@Override public String getMarkdownText() { return markdownText.get(); }
-			@Override public Node getMarkdownAST() { return markdownAST.get(); }
-			@Override public Path getPath() { return path.get(); }
-			@Override public IndexRange getEditorSelection() { return editorSelection.get(); }
+			@Override
+			public Renderer getRenderer() {
+				return activeRenderer;
+			}
+
+			@Override
+			public String getMarkdownText() {
+				return markdownText.get();
+			}
+
+			@Override
+			public Node getMarkdownAST() {
+				return markdownAST.get();
+			}
+
+			@Override
+			public Path getPath() {
+				return path.get();
+			}
+
+			@Override
+			public IndexRange getEditorSelection() {
+				return editorSelection.get();
+			}
 		};
 
-		path.addListener((observable, oldValue, newValue) -> update() );
-		markdownText.addListener((observable, oldValue, newValue) -> update() );
-		markdownAST.addListener((observable, oldValue, newValue) -> update() );
+		path.addListener((observable, oldValue, newValue) -> update());
+		markdownText.addListener((observable, oldValue, newValue) -> update());
+		markdownAST.addListener((observable, oldValue, newValue) -> update());
 		scrollY.addListener((observable, oldValue, newValue) -> scrollY());
 		editorSelection.addListener((observable, oldValue, newValue) -> editorSelectionChanged());
 
@@ -124,19 +168,33 @@ public class MarkdownPreviewPane
 		activePreview = null;
 
 		switch (rendererType) {
-			case CommonMark:	activeRenderer = new CommonmarkPreviewRenderer(); break;
-			case FlexMark:		activeRenderer = new FlexmarkPreviewRenderer(); break;
+			case CommonMark:
+				activeRenderer = new CommonmarkPreviewRenderer();
+				break;
+			case FlexMark:
+				activeRenderer = new FlexmarkPreviewRenderer();
+				break;
 		}
 	}
 
 	public void setType(Type type) {
 		Preview preview;
 		switch (type) {
-			case Web:		preview = webViewPreview; break;
-			case Source:	preview = htmlSourcePreview; break;
-			case Ast:		preview = astPreview; break;
-			case External:	preview = externalPreview; break;
-			default:		preview = null; break;
+			case Web:
+				preview = webViewPreview;
+				break;
+			case Source:
+				preview = htmlSourcePreview;
+				break;
+			case Ast:
+				preview = astPreview;
+				break;
+			case External:
+				preview = externalPreview;
+				break;
+			default:
+				preview = null;
+				break;
 		}
 		if (activePreview == preview)
 			return;
@@ -149,6 +207,7 @@ public class MarkdownPreviewPane
 	}
 
 	private boolean updateRunLaterPending;
+
 	private void update() {
 		if (activePreview == null)
 			return;
@@ -167,6 +226,7 @@ public class MarkdownPreviewPane
 	}
 
 	private boolean scrollYrunLaterPending;
+
 	private void scrollY() {
 		if (activePreview == null)
 			return;
@@ -183,6 +243,7 @@ public class MarkdownPreviewPane
 	}
 
 	private boolean editorSelectionChangedRunLaterPending;
+
 	private void editorSelectionChanged() {
 		if (activePreview == null)
 			return;
@@ -205,21 +266,36 @@ public class MarkdownPreviewPane
 
 	// 'path' property
 	private final ObjectProperty<Path> path = new SimpleObjectProperty<>();
-	public ObjectProperty<Path> pathProperty() { return path; }
+
+	public ObjectProperty<Path> pathProperty() {
+		return path;
+	}
 
 	// 'markdownText' property
 	private final SimpleStringProperty markdownText = new SimpleStringProperty();
-	public SimpleStringProperty markdownTextProperty() { return markdownText; }
+
+	public SimpleStringProperty markdownTextProperty() {
+		return markdownText;
+	}
 
 	// 'markdownAST' property
 	private final ObjectProperty<Node> markdownAST = new SimpleObjectProperty<>();
-	public ObjectProperty<Node> markdownASTProperty() { return markdownAST; }
+
+	public ObjectProperty<Node> markdownASTProperty() {
+		return markdownAST;
+	}
 
 	// 'scrollY' property
 	private final DoubleProperty scrollY = new SimpleDoubleProperty();
-	public DoubleProperty scrollYProperty() { return scrollY; }
+
+	public DoubleProperty scrollYProperty() {
+		return scrollY;
+	}
 
 	// 'editorSelection' property
 	private final ObjectProperty<IndexRange> editorSelection = new SimpleObjectProperty<>();
-	public ObjectProperty<IndexRange> editorSelectionProperty() { return editorSelection; }
+
+	public ObjectProperty<IndexRange> editorSelectionProperty() {
+		return editorSelection;
+	}
 }
