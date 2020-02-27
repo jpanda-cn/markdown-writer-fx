@@ -34,6 +34,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
+import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -51,6 +52,7 @@ import javafx.stage.Window;
 import javafx.stage.WindowEvent;
 import org.controlsfx.control.PopOver;
 import org.controlsfx.control.PopOver.ArrowLocation;
+import org.markdownwriterfx.addons.LoadLocalHtmlMarkdownTextAreaEditAddon;
 import org.markdownwriterfx.editor.MarkdownEditorPane;
 import org.markdownwriterfx.editor.MarkdownTextArea;
 import org.markdownwriterfx.editor.SmartEdit;
@@ -91,6 +93,9 @@ class MainWindow {
 		fileEditorManager = new FileEditorManager(fileEditorTabPane);
 		projectPane = new ProjectPane(fileEditorManager);
 
+		fileEditorTabPane.activeFileEditorProperty().addListener((observable, oldValue, newValue) -> newValue.editorProperty().addListener((observable1, oldValue1, newValue1) -> {
+//			newValue1.addMarkdownTextAreaEditAddon(loadLocalHtmlMarkdownTextAreaEditAddon);
+		}));
 		Preferences state = MarkdownWriterFXApp.getState();
 		double dividerPosition = state.getDouble("projectPaneDividerPosition", 0.2);
 
@@ -192,15 +197,23 @@ class MainWindow {
 		if (fileEditor != null) {
 			if (fileEditor.getEditor() == null) {
 				fileEditor.editorProperty().addListener(MarkdownEditorPaneChangeListener);
+				fileEditor.editorProperty().addListener(new ChangeListener<MarkdownEditorPane>() {
+					@Override
+					public void changed(ObservableValue<? extends MarkdownEditorPane> observable, MarkdownEditorPane oldValue, MarkdownEditorPane newValue) {
+//						newValue.addMarkdownTextAreaEditAddon(new LoadLocalHtmlMarkdownTextAreaEditAddon());
+					}
+				});
 			} else {
+//				fileEditor.getEditor().addMarkdownTextAreaEditAddon(new LoadLocalHtmlMarkdownTextAreaEditAddon());
 				TextSelectStatusUpdater.of(textSelectLabel.textProperty()).apply(fileEditor.getEditor().getTextArea());
 			}
 		}
 
 
 		fileEditorTabPane.activeFileEditorProperty().addListener((observable, oldValue, newEditor) -> {
-			if (newEditor!=null){
+			if (newEditor != null) {
 				newEditor.editorProperty().addListener(MarkdownEditorPaneChangeListener);
+//				newEditor.editorProperty().addListener((observable12, oldValue12, newValue) -> newValue.addMarkdownTextAreaEditAddon(new LoadLocalHtmlMarkdownTextAreaEditAddon()));
 			}
 		});
 

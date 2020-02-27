@@ -33,6 +33,7 @@ import javafx.beans.property.*;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.control.IndexRange;
 import javafx.scene.layout.BorderPane;
+import org.markdownwriterfx.addons.LoadLocalHtmlMarkdownTextAreaEditAddon;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.options.Options.RendererType;
 import org.markdownwriterfx.util.Range;
@@ -96,6 +97,8 @@ public class MarkdownPreviewPane {
 		void scrollY(PreviewContext context, double value);
 
 		void editorSelectionChanged(PreviewContext context, IndexRange range);
+
+		default LoadLocalHtmlMarkdownTextAreaEditAddon edit(){return null;};
 	}
 
 	interface PreviewContext {
@@ -110,7 +113,7 @@ public class MarkdownPreviewPane {
 		IndexRange getEditorSelection();
 	}
 
-	public MarkdownPreviewPane() {
+	public MarkdownPreviewPane(LoadLocalHtmlMarkdownTextAreaEditAddon loadLocalHtmlMarkdownTextAreaEditAddon) {
 		pane.getStyleClass().add("preview-pane");
 
 		previewContext = new PreviewContext() {
@@ -145,7 +148,7 @@ public class MarkdownPreviewPane {
 		markdownAST.addListener((observable, oldValue, newValue) -> update());
 		scrollY.addListener((observable, oldValue, newValue) -> scrollY());
 		editorSelection.addListener((observable, oldValue, newValue) -> editorSelectionChanged());
-
+		webViewPreview.setEdit(loadLocalHtmlMarkdownTextAreaEditAddon);
 		Options.additionalCSSProperty().addListener(new WeakChangeListener<String>(
 			(observable, oldValue, newValue) -> update()));
 	}

@@ -53,6 +53,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.Tooltip;
 import javafx.scene.text.Text;
 import org.fxmisc.undo.UndoManager;
+import org.markdownwriterfx.addons.LoadLocalHtmlMarkdownTextAreaEditAddon;
 import org.markdownwriterfx.editor.MarkdownEditorPane;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.preview.MarkdownPreviewPane;
@@ -222,9 +223,10 @@ class FileEditor
 		}
 
 		// load file and create UI when the tab becomes visible the first time
-
-		markdownPreviewPane = new MarkdownPreviewPane();
+		LoadLocalHtmlMarkdownTextAreaEditAddon loadLocalHtmlMarkdownTextAreaEditAddon=new LoadLocalHtmlMarkdownTextAreaEditAddon();
+		markdownPreviewPane = new MarkdownPreviewPane(loadLocalHtmlMarkdownTextAreaEditAddon);
 		markdownEditorPane = new MarkdownEditorPane();
+		markdownEditorPane.addMarkdownTextAreaEditAddon(loadLocalHtmlMarkdownTextAreaEditAddon);
 		editor.addListener(new ChangeListener<MarkdownEditorPane>() {
 			@Override
 			public void changed(ObservableValue<? extends MarkdownEditorPane> observable, MarkdownEditorPane oldValue, MarkdownEditorPane newValue) {

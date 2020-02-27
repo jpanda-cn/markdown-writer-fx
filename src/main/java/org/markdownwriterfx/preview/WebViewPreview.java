@@ -34,20 +34,22 @@ import com.vladsch.flexmark.util.ast.Visitor;
 import javafx.concurrent.Worker.State;
 import javafx.scene.control.IndexRange;
 import javafx.scene.web.WebView;
+import netscape.javascript.JSObject;
 import org.jetbrains.annotations.NotNull;
+import org.markdownwriterfx.addons.LoadLocalHtmlMarkdownTextAreaEditAddon;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.preview.MarkdownPreviewPane.PreviewContext;
 import org.markdownwriterfx.preview.MarkdownPreviewPane.Renderer;
 import org.markdownwriterfx.util.Utils;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.*;
 import java.util.function.BiConsumer;
 
 /**
@@ -118,7 +120,45 @@ class WebViewPreview
 		}
 		lastEditorSelection = context.getEditorSelection();
 
-		
+		Document document = webView.getEngine().getDocument();
+		if (document == null) {
+			initDocument(context, renderer);
+		} else {
+			refresh();
+		}
+	}
+
+	public void refresh() {
+		edit.getRemoveHtmlProperty().forEach(i -> {
+			// remove node
+		try{
+			JSObject jsObject = (JSObject) webView.getEngine().executeScript("document");
+			JSObject element = (JSObject) jsObject.call("getElementById", i);
+			JSObject parent = (JSObject) element.getMember("parentNode");
+			parent.call("removeChild", element);
+		}catch (Exception e){}
+		});
+
+		// ADD
+		edit.getWaitAddHtmlProperty().forEach(i -> {
+			Document doc = webView.getEngine().getDocument();
+			Element tmp = doc.createElement("tmp");
+			String id = UUID.randomUUID().toString();
+			tmp.setAttribute("id", id);
+			Element next = doc.getElementById(edit.getNextDomProperty());
+			if (Optional.ofNullable(edit.getNextDomProperty()).isPresent()) {
+				doc.insertBefore(tmp, next);
+			} else {
+				doc.getLastChild().appendChild(tmp);
+			}
+			System.out.println(String.format("document.getElementById('%s').innerHTML='%s'", id, i));
+			JSObject document = (JSObject) webView.getEngine().executeScript("document");
+			JSObject element = (JSObject) document.call("getElementById", id);
+			element.setMember("innerHTML", i);
+		});
+	}
+
+	public void initDocument(PreviewContext context, Renderer renderer) {
 		Path path = context.getPath();
 		String base = (path != null)
 			? ("<base href=\"" + path.getParent().toUri().toString() + "\">\n")
@@ -148,10 +188,7 @@ class WebViewPreview
 				+ "<script>" + highlightNodesAt(lastEditorSelection) + "</script>\n"
 				+ "</body>\n"
 				+ "</html>");
-
-		// TODO test
 	}
-
 
 	@Override
 	public void scrollY(PreviewContext context, double value) {
@@ -169,6 +206,17 @@ class WebViewPreview
 		runWhenLoaded(() -> {
 			webView.getEngine().executeScript(highlightNodesAt(range));
 		});
+	}
+
+	private LoadLocalHtmlMarkdownTextAreaEditAddon edit;
+
+	public void setEdit(LoadLocalHtmlMarkdownTextAreaEditAddon edit) {
+		this.edit = edit;
+	}
+
+	@Override
+	public LoadLocalHtmlMarkdownTextAreaEditAddon edit() {
+		return this.edit;
 	}
 
 	private String highlightNodesAt(IndexRange range) {

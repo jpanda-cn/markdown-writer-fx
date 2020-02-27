@@ -28,7 +28,6 @@
 package org.markdownwriterfx.editor;
 
 import com.vladsch.flexmark.parser.Parser;
-import com.vladsch.flexmark.util.ast.Block;
 import com.vladsch.flexmark.util.ast.Node;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -47,6 +46,7 @@ import org.fxmisc.richtext.CharacterHit;
 import org.fxmisc.richtext.model.StyledDocument;
 import org.fxmisc.undo.UndoManager;
 import org.fxmisc.wellbehaved.event.Nodes;
+import org.markdownwriterfx.addons.MarkdownTextAreaEditAddon;
 import org.markdownwriterfx.controls.BottomSlidePane;
 import org.markdownwriterfx.editor.FindReplacePane.HitsChangeListener;
 import org.markdownwriterfx.editor.MarkdownSyntaxHighlighter.ExtraStyledRanges;
@@ -92,35 +92,14 @@ public class MarkdownEditorPane {
 	private final InvalidationListener optionsListener;
 	private String lineSeparator = getLineSeparatorOrDefault();
 
-	private boolean isInNode(int start, int end, Node node) {
-		if (end == start) {
-			end++;
-		}
-		return (start <= node.getStartOffset() && end >= node.getStartOffset())
-			||
-			(end >= node.getStartOffset() && end <= node.getEndOffset());
-//		return start <= node.getStartOffset() && end >= node.getEndOffset();
-	}
+	private List<MarkdownTextAreaEditAddon> markdownTextAreaEditAddons = new ArrayList<>();
 
-	private List<Node> getParagraph(int start, int end, Node root, List<Node> nodes) {
-
-		if (isInNode(start, end, root) && root instanceof Block) {
-			// find in child
-			List<Node> seqNodes = new ArrayList<>();
-			for (Node child = root.getFirstChild(); child != null; child = child.getNext()) {
-				if (isInNode(start, end, child) && child instanceof Block) {
-					seqNodes.add(child);
-				}
-			}
-			if (seqNodes.size() == 1) {
-				// split
-				return getParagraph(start, end, seqNodes.get(0), seqNodes);
-			} else if (seqNodes.size() > 0) {
-				// not split
-				return seqNodes;
-			}
+	public MarkdownEditorPane addMarkdownTextAreaEditAddon(MarkdownTextAreaEditAddon addon) {
+		if (!markdownTextAreaEditAddons.contains(addon)) {
+		markdownTextAreaEditAddons.add(addon);
+		
 		}
-		return nodes;
+		return this;
 	}
 
 	private MarkdownPreviewPane markdownPreviewPane;
@@ -129,29 +108,23 @@ public class MarkdownEditorPane {
 		this.markdownPreviewPane = markdownPreviewPane;
 	}
 
+	public MarkdownPreviewPane getMarkdownPreviewPane() {
+		return markdownPreviewPane;
+	}
+
 	public MarkdownEditorPane() {
 		textArea = new MarkdownTextArea() {
+
+
 			@Override
 			public void replace(int start, int end, StyledDocument<Collection<String>, Either<String, EmbeddedImage>, Collection<String>> replacement) {
-				List<Node> p = MarkdownEditorPane.this.getParagraph(start, end, markdownAST.get(), null);
-				System.out.println(p);
-				if (p != null) {
-					for (Node n : p) {
-						// wait delete
-//						System.out.println(markdownPreviewPane.getActiveRenderer().getHtml(n));
-						System.out.println(String.format("document.getElementById(%s)", String.format("%s@%d", n.getNodeName(), n.hashCode())));
-					}
+				for (MarkdownTextAreaEditAddon addon : markdownTextAreaEditAddons) {
+					addon.pre(start, end, replacement, MarkdownEditorPane.this);
 				}
 				super.replace(start, end, replacement);
-				List<Node> p2 = MarkdownEditorPane.this.getParagraph(start, start + replacement.length(), markdownAST.get(), null);
-				System.out.println(p2);
-				if (p2 != null) {
-					for (Node n : p2) {
-						if (markdownPreviewPane.getActiveRenderer() != null) {
-							System.out.println(markdownPreviewPane.getActiveRenderer().getHtml(n));
-							// wait added
-						}
-					}
+
+				for (MarkdownTextAreaEditAddon addon : markdownTextAreaEditAddons) {
+					addon.post(start, end, replacement, MarkdownEditorPane.this);
 				}
 			}
 		};
