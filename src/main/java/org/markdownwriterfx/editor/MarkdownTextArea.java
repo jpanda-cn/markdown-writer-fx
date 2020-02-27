@@ -91,10 +91,23 @@ public void  addAddons(){
 	@Override
 	public void replace(int start, int end, StyledDocument<Collection<String>, Either<String, EmbeddedImage>, Collection<String>> replacement) {
 		suspendScrollYUntilLayout(() -> {
+			// start != end  replace
+
+			// old value
+//			System.out.println(String.format("%s,%d:%d",getText(start,end),start,end));
+
 			super.replace(start, end, replacement);
+
+			// new value
+//			System.out.println(String.format("%s,%d:%d",getText(start,start+replacement.length()),start,end));
 		});
 	}
-
+	private boolean isInNode(int start, int end, com.vladsch.flexmark.util.ast.Node node) {
+		if (end == start){
+			end++;
+		}
+		return start < node.getEndOffset() && end > node.getStartOffset();
+	}
 	@Override
 	public void setStyleSpans(int from, StyleSpans<? extends Collection<String>> styleSpans) {
 		suspendScrollYUntilLayout(() -> {
@@ -302,4 +315,5 @@ public void  addAddons(){
 		} else
 			super.requestFollowCaret();
 	}
+
 }

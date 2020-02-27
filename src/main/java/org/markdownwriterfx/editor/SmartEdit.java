@@ -995,7 +995,7 @@ public class SmartEdit
 					if (deepest) {
 						int oldNodesSize = nodes.size();
 						visitChildren(node);
-
+						
 						// add only if no other child was added
 						if (nodes.size() == oldNodesSize)
 							nodes.add((T) node);

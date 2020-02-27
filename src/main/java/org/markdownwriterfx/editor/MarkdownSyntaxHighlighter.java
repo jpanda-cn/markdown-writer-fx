@@ -235,7 +235,6 @@ class MarkdownSyntaxHighlighter
 			@Override
 			protected void processNode(@NotNull Node node, boolean withChildren, @NotNull BiConsumer<Node, Visitor<Node>> processor) {
 				Class<? extends Node> nodeClass = node.getClass();
-
 				StyleClass style = node2style.get(nodeClass);
 				if (style != null)
 					setStyleClass(node, style);

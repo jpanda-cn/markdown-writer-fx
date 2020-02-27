@@ -118,6 +118,7 @@ class WebViewPreview
 		}
 		lastEditorSelection = context.getEditorSelection();
 
+		
 		Path path = context.getPath();
 		String base = (path != null)
 			? ("<base href=\"" + path.getParent().toUri().toString() + "\">\n")
@@ -148,7 +149,9 @@ class WebViewPreview
 				+ "</body>\n"
 				+ "</html>");
 
+		// TODO test
 	}
+
 
 	@Override
 	public void scrollY(PreviewContext context, double value) {
