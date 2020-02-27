@@ -45,7 +45,8 @@ public class ImageNodeRenderer implements NodeRenderer {
 	}
 
 	@Override
-	public @Nullable Set<NodeRenderingHandler<?>> getNodeRenderingHandlers() {
+	public @Nullable
+	Set<NodeRenderingHandler<?>> getNodeRenderingHandlers() {
 		return new HashSet<>(Arrays.asList(
 			new NodeRenderingHandler<>(Image.class, this::render)
 			, new NodeRenderingHandler<>(ImageRef.class, this::render)

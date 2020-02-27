@@ -28,11 +28,15 @@ public class ImageURLStreamHandler extends URLStreamHandler {
 
 	@Override
 	protected URLConnection openConnection(URL u) throws IOException {
+		System.out.println(u.toString());
 		URL connectionUrl = new URL(isHttps ? "https" : "http", u.getHost(), u.getPort(), u.getFile().replaceAll("\\\\", "/"));
+
 		HttpURLConnection httpURLConnection = (HttpURLConnection) connectionUrl.openConnection();
 		httpURLConnection.setRequestMethod("GET");
 		httpURLConnection.setRequestProperty("User-Agent", userAgent);
-		return httpURLConnection;
+		return new ImageURLConnection(connectionUrl, httpURLConnection, false);
+
+//		return httpURLConnection;
 	}
 
 }
