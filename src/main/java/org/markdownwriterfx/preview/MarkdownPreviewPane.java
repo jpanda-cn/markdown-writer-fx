@@ -144,7 +144,7 @@ public class MarkdownPreviewPane {
 		path.addListener((observable, oldValue, newValue) -> update());
 		markdownText.addListener((observable, oldValue, newValue) -> update());
 		markdownAST.addListener((observable, oldValue, newValue) -> update());
-		scrollY.addListener((observable, oldValue, newValue) -> scrollY());
+		updateY.addListener((observable, oldValue, newValue) -> scrollY());
 		editorSelection.addListener((observable, oldValue, newValue) -> editorSelectionChanged());
 
 		Options.additionalCSSProperty().addListener(new WeakChangeListener<String>(
@@ -291,6 +291,12 @@ public class MarkdownPreviewPane {
 
 	public DoubleProperty scrollYProperty() {
 		return scrollY;
+	}
+
+	private final DoubleProperty updateY = new SimpleDoubleProperty();
+
+	public DoubleProperty updateYProperty() {
+		return updateY;
 	}
 
 	// 'editorSelection' property

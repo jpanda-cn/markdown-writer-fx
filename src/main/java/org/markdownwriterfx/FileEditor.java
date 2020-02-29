@@ -245,6 +245,7 @@ class FileEditor
 		markdownPreviewPane.markdownASTProperty().bind(markdownEditorPane.markdownASTProperty());
 		markdownPreviewPane.editorSelectionProperty().bind(markdownEditorPane.selectionProperty());
 		markdownPreviewPane.scrollYProperty().bind(markdownEditorPane.scrollYProperty());
+		markdownPreviewPane.updateYProperty().bind(markdownEditorPane.updateYProperty());
 
 		// bind properties
 		readOnly.bind(markdownEditorPane.readOnlyProperty());

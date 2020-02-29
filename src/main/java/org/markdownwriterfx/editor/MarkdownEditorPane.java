@@ -319,6 +319,11 @@ public class MarkdownEditorPane {
 
 	public ObservableValue<Double> scrollYProperty() {
 		return textArea.scrollY;
+
+	}
+
+	public ObservableValue<Double> updateYProperty() {
+		return textArea.updateY;
 	}
 
 	// 'path' property

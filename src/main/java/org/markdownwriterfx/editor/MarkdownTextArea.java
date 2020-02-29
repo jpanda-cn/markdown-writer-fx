@@ -54,6 +54,7 @@ public class MarkdownTextArea
 	private static final ServiceLoader<GenericStyledAreaAddon> addons = ServiceLoader.load(GenericStyledAreaAddon.class);
 	// suspendable scrollY value to reduce enormous amount of change events on estimatedScrollY and totalHeightEstimate
 	final SuspendableVal<Double> scrollY;
+	final SuspendableVal<Double> updateY;
 	private Guard scrollYguard;
 
 	public MarkdownTextArea() {
@@ -73,7 +74,9 @@ public class MarkdownTextArea
 			double maxValue = totalHeightEstimateProperty().getOrElse(0.).doubleValue() - getHeight();
 			return (maxValue > 0) ? Math.min(Math.max(value / maxValue, 0), 1) : 0;
 		}, estimatedScrollYProperty(), totalHeightEstimateProperty()).suspendable();
-
+		// record last update time
+		updateY = Val.create(() -> Long.valueOf(System.currentTimeMillis()).doubleValue(), estimatedScrollYProperty(), totalHeightEstimateProperty()).suspendable();
+		
 		TextSelectStatusUpdater.of(Options.selectTextShowProperty()).apply(this);
 
 	}
