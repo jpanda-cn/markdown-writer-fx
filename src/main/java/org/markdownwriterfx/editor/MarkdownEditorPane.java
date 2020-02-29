@@ -38,6 +38,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
@@ -77,6 +78,7 @@ import static org.fxmisc.wellbehaved.event.InputMap.sequence;
 public class MarkdownEditorPane {
 	private final BottomSlidePane borderPane;
 	private final MarkdownTextArea textArea;
+
 	private final ParagraphOverlayGraphicFactory overlayGraphicFactory;
 	private LineNumberGutterFactory lineNumberGutterFactory;
 	private WhitespaceOverlayFactory whitespaceOverlayFactory;
@@ -104,7 +106,7 @@ public class MarkdownEditorPane {
 		textArea.getStyleClass().add("markdown-editor");
 		textArea.getStylesheets().add("org/markdownwriterfx/editor/MarkdownEditor.css");
 		textArea.getStylesheets().add("org/markdownwriterfx/prism.css");
-
+		textArea.setPadding(new Insets(0,0,40,0));
 		textArea.textProperty().addListener((observable, oldText, newText) -> {
 			textChanged(newText);
 		});
