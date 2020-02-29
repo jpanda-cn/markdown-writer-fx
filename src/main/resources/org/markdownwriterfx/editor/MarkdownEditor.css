@@ -27,6 +27,7 @@
 
 .markdown-editor {
 	-mwfx-inline-background-color: #f6f6f6;
+	-fx-padding: 0 0 40 0;
 }
 
 .markdown-editor:disabled,

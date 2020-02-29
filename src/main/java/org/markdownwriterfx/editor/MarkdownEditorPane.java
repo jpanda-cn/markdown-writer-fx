@@ -106,7 +106,6 @@ public class MarkdownEditorPane {
 		textArea.getStyleClass().add("markdown-editor");
 		textArea.getStylesheets().add("org/markdownwriterfx/editor/MarkdownEditor.css");
 		textArea.getStylesheets().add("org/markdownwriterfx/prism.css");
-		textArea.setPadding(new Insets(0,0,40,0));
 		textArea.textProperty().addListener((observable, oldText, newText) -> {
 			textChanged(newText);
 		});
