@@ -47,14 +47,13 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
+import javafx.scene.text.Text;
 import javafx.stage.Window;
 import javafx.stage.WindowEvent;
 import org.controlsfx.control.PopOver;
 import org.controlsfx.control.PopOver.ArrowLocation;
 import org.markdownwriterfx.editor.MarkdownEditorPane;
-import org.markdownwriterfx.editor.MarkdownTextArea;
 import org.markdownwriterfx.editor.SmartEdit;
-import org.markdownwriterfx.editor.TextSelectStatusUpdater;
 import org.markdownwriterfx.options.MarkdownExtensionsPane;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.options.Options.RendererType;
@@ -88,6 +87,10 @@ class MainWindow {
 
 	MainWindow() {
 		fileEditorTabPane = new FileEditorTabPane(this);
+		// clear select text
+		fileEditorTabPane.activeFileEditorProperty().addListener((observable, oldValue, newValue) -> Options.setSelectTextShowProperty(""));
+
+		
 		fileEditorManager = new FileEditorManager(fileEditorTabPane);
 		projectPane = new ProjectPane(fileEditorManager);
 
@@ -178,34 +181,21 @@ class MainWindow {
 		hBox.setAlignment(Pos.CENTER_RIGHT);
 		hBox.setPadding(new Insets(5, 10, 5, 10));
 
-		Label textSelectLabel = new Label();
-
-		ChangeListener<MarkdownEditorPane> MarkdownEditorPaneChangeListener = ((observable1, oldValue1, newValue) -> {
-			textSelectLabel.textProperty().set("");
-			MarkdownTextArea markdownTextArea = newValue.getTextArea();
-			TextSelectStatusUpdater.of(textSelectLabel.textProperty()).apply(markdownTextArea);
-
-		});
-
-
-		FileEditor fileEditor = fileEditorTabPane.getActiveFileEditor();
-		if (fileEditor != null) {
-			if (fileEditor.getEditor() == null) {
-				fileEditor.editorProperty().addListener(MarkdownEditorPaneChangeListener);
-			} else {
-				TextSelectStatusUpdater.of(textSelectLabel.textProperty()).apply(fileEditor.getEditor().getTextArea());
-			}
-		}
+		Text textSelectLabel = new Text();
+		textSelectLabel.textProperty().bind(Options.selectTextShowProperty());
+		HBox.setMargin(textSelectLabel, new Insets(0, 10, 0, 10));
+		
+		// load encoding
+		Text encoding = new Text();
+		encoding.textProperty().bind(Options.encodingProperty());
+		HBox.setMargin(encoding, new Insets(0, 10, 0, 10));
 
 
-		fileEditorTabPane.activeFileEditorProperty().addListener((observable, oldValue, newEditor) -> {
-			if (newEditor!=null){
-				newEditor.editorProperty().addListener(MarkdownEditorPaneChangeListener);
-			}
-		});
+		Text lineSeparator = new Text();
+		lineSeparator.textProperty().bind(Options.lineSeparatorNameProperty());
+		HBox.setMargin(lineSeparator, new Insets(0, 10, 0, 10));
 
-		hBox.getChildren().addAll(textSelectLabel);
-
+		hBox.getChildren().addAll(textSelectLabel, lineSeparator, encoding);
 		return hBox;
 	}
 

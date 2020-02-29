@@ -27,9 +27,11 @@
 
 package org.markdownwriterfx.editor;
 
+import com.vladsch.flexmark.ast.InlineLinkNode;
+import com.vladsch.flexmark.ast.Text;
 import com.vladsch.flexmark.parser.Parser;
-import com.vladsch.flexmark.util.ast.Block;
 import com.vladsch.flexmark.util.ast.Node;
+import com.vladsch.flexmark.util.sequence.BasedSequence;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
@@ -44,7 +46,6 @@ import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.Caret.CaretVisibility;
 import org.fxmisc.richtext.CaretNode;
 import org.fxmisc.richtext.CharacterHit;
-import org.fxmisc.richtext.model.StyledDocument;
 import org.fxmisc.undo.UndoManager;
 import org.fxmisc.wellbehaved.event.Nodes;
 import org.markdownwriterfx.controls.BottomSlidePane;
@@ -53,18 +54,15 @@ import org.markdownwriterfx.editor.MarkdownSyntaxHighlighter.ExtraStyledRanges;
 import org.markdownwriterfx.options.MarkdownExtensions;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.preview.MarkdownPreviewPane;
-import org.reactfx.util.Either;
+import org.markdownwriterfx.util.StringDiffusionMatch;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyCombination.ALT_DOWN;
-import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
+import static javafx.scene.input.KeyCombination.*;
 import static org.fxmisc.wellbehaved.event.EventPattern.keyPressed;
 import static org.fxmisc.wellbehaved.event.InputMap.consume;
 import static org.fxmisc.wellbehaved.event.InputMap.sequence;
@@ -92,36 +90,6 @@ public class MarkdownEditorPane {
 	private final InvalidationListener optionsListener;
 	private String lineSeparator = getLineSeparatorOrDefault();
 
-	private boolean isInNode(int start, int end, Node node) {
-		if (end == start) {
-			end++;
-		}
-		return (start <= node.getStartOffset() && end >= node.getStartOffset())
-			||
-			(end >= node.getStartOffset() && end <= node.getEndOffset());
-//		return start <= node.getStartOffset() && end >= node.getEndOffset();
-	}
-
-	private List<Node> getParagraph(int start, int end, Node root, List<Node> nodes) {
-
-		if (isInNode(start, end, root) && root instanceof Block) {
-			// find in child
-			List<Node> seqNodes = new ArrayList<>();
-			for (Node child = root.getFirstChild(); child != null; child = child.getNext()) {
-				if (isInNode(start, end, child) && child instanceof Block) {
-					seqNodes.add(child);
-				}
-			}
-			if (seqNodes.size() == 1) {
-				// split
-				return getParagraph(start, end, seqNodes.get(0), seqNodes);
-			} else if (seqNodes.size() > 0) {
-				// not split
-				return seqNodes;
-			}
-		}
-		return nodes;
-	}
 
 	private MarkdownPreviewPane markdownPreviewPane;
 
@@ -130,31 +98,7 @@ public class MarkdownEditorPane {
 	}
 
 	public MarkdownEditorPane() {
-		textArea = new MarkdownTextArea() {
-			@Override
-			public void replace(int start, int end, StyledDocument<Collection<String>, Either<String, EmbeddedImage>, Collection<String>> replacement) {
-				List<Node> p = MarkdownEditorPane.this.getParagraph(start, end, markdownAST.get(), null);
-				System.out.println(p);
-				if (p != null) {
-					for (Node n : p) {
-						// wait delete
-//						System.out.println(markdownPreviewPane.getActiveRenderer().getHtml(n));
-						System.out.println(String.format("document.getElementById(%s)", String.format("%s@%d", n.getNodeName(), n.hashCode())));
-					}
-				}
-				super.replace(start, end, replacement);
-				List<Node> p2 = MarkdownEditorPane.this.getParagraph(start, start + replacement.length(), markdownAST.get(), null);
-				System.out.println(p2);
-				if (p2 != null) {
-					for (Node n : p2) {
-						if (markdownPreviewPane.getActiveRenderer() != null) {
-							System.out.println(markdownPreviewPane.getActiveRenderer().getHtml(n));
-							// wait added
-						}
-					}
-				}
-			}
-		};
+		textArea = new MarkdownTextArea();
 		textArea.setWrapText(true);
 		textArea.setUseInitialStyleForInsertion(true);
 		textArea.getStyleClass().add("markdown-editor");
@@ -179,8 +123,10 @@ public class MarkdownEditorPane {
 			consume(keyPressed(MINUS, SHORTCUT_DOWN), this::decreaseFontSize),
 			consume(keyPressed(DIGIT0, SHORTCUT_DOWN), this::resetFontSize),
 			consume(keyPressed(W, ALT_DOWN), this::showWhitespace),
-			consume(keyPressed(I, ALT_DOWN), this::showImagesEmbedded)
+			consume(keyPressed(I, ALT_DOWN), this::showImagesEmbedded),
+			consume(keyPressed(W, CONTROL_DOWN), this::selectWords)
 		));
+
 
 		// create scroll pane
 		VirtualizedScrollPane<MarkdownTextArea> scrollPane = new VirtualizedScrollPane<>(textArea);
@@ -459,6 +405,11 @@ public class MarkdownEditorPane {
 		Options.setShowImagesEmbedded(!Options.isShowImagesEmbedded());
 	}
 
+	private void selectWords(KeyEvent e) {
+		IndexRange diffuse = selectDiffuse(selectionProperty().getValue());
+		selectRange(diffuse.getStart(), diffuse.getEnd());
+	}
+
 	private void updateShowLineNo() {
 		boolean showLineNo = Options.isShowLineNo();
 		if (showLineNo && lineNumberGutterFactory == null) {
@@ -632,5 +583,111 @@ public class MarkdownEditorPane {
 
 	public MarkdownTextArea getTextArea() {
 		return textArea;
+	}
+
+	public IndexRange selectDiffuse(IndexRange range) {
+		return selectDiffuse(loadNode(getMarkdownAST(), range), range);
+	}
+
+	public IndexRange selectDiffuse(Node match, IndexRange range) {
+		if (match == null) {
+			return range;
+		}
+		if (match instanceof InlineLinkNode) {
+			return getRange(range, (InlineLinkNode) match);
+		}
+		if (match instanceof Text) {
+			return getRange(range, (Text) match);
+		}
+		return getRange(range, match);
+	}
+
+	public IndexRange getRange(IndexRange range, InlineLinkNode match) {
+		BasedSequence url = match.getUrl();
+		if (beIncludeNode(url, range) && range.getLength() != url.length()) {
+			return getRange(range, new Text(url));
+		}
+		return getRange(range, (Node) match);
+	}
+
+	public IndexRange getRange(IndexRange range, Text match) {
+		boolean isFullMatch = match.getTextLength() == range.getLength();
+		if (isFullMatch) {
+			Node mp = match.getParent();
+			if (mp != null) {
+				return new IndexRange(mp.getStartOffset(), mp.getEndOffset());
+			}
+			return range;
+		}
+
+
+		Node finalNode = loadNode(new StringDiffusionMatch().loadNode(new Text(match.getChars().toString()).getBaseSequence()), new IndexRange(range.getStart() - match.getStartOffset(), range.getEnd() - match.getStartOffset()));
+		if (finalNode == null) {
+			return range;
+		}
+
+		boolean isFull = finalNode.getTextLength() == range.getLength();
+		Node p = finalNode.getParent();
+		if (!isFull || p == null) {
+			return new IndexRange(finalNode.getStartOffset() + match.getStartOffset(), finalNode.getEndOffset() + match.getStartOffset());
+		}
+		return new IndexRange(p.getStartOffset() + match.getStartOffset(), p.getEndOffset() + match.getStartOffset());
+
+//		return selectDiffuse(loadNode(getMarkdownAST(), range), range);
+//		Text nt = new TMatch().loadNode(match.getBaseSequence());
+//		IndexRange r = new IndexRange(range.getStart() - match.getStartOffset(), range.getEnd() - match.getStartOffset());
+//		r = new TextMatcher(match.getChars().toString()).diffuse(r);
+//		return new IndexRange(r.getStart() + match.getStartOffset(), r.getEnd() + match.getStartOffset());
+	}
+
+	public IndexRange getRange(IndexRange range, Node match) {
+		// is full
+		boolean isFull = match.getTextLength() == range.getLength();
+		Node p = match.getParent();
+		if (!isFull || p == null) {
+			return new IndexRange(match.getStartOffset(), match.getEndOffset());
+		}
+		return new IndexRange(p.getStartOffset(), p.getEndOffset());
+	}
+
+	public Node selectDiffuseNode(Node match, IndexRange range) {
+
+		if (match == null) {
+			return null;
+		}
+		// is full
+		boolean isFull = match.getTextLength() == range.getLength();
+		Node p = match.getParent();
+		if (!isFull || p == null) {
+			return match;
+		}
+		return p;
+	}
+
+	private Node loadNode(Node node, IndexRange range) {
+
+		if (beIncludeNode(node, range)) {
+			// include , find child
+			for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {
+				if (beIncludeNode(child, range)) {
+					return loadNode(child, range);
+				}
+				// not find in child ,so return parent
+			}
+			return node;
+		}
+		return null;
+	}
+
+	private boolean beIncludeNode(Node node, IndexRange range) {
+
+		return node.getStartOffset() <= range.getStart() && node.getEndOffset() >= range.getEnd();
+
+	}
+
+	private boolean beIncludeNode(BasedSequence seq, IndexRange range) {
+
+		return seq.getStartOffset() <= range.getStart() && seq.getEndOffset() >= range.getEnd();
+
 	}
 }

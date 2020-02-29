@@ -163,6 +163,7 @@ class FlexmarkPreviewRenderer
 
 		if (astRoot2 == null)
 			astRoot2 = parseMarkdown(markdownText);
+
 		return astRoot2;
 	}
 
@@ -256,9 +257,9 @@ class FlexmarkPreviewRenderer
 
 	private String printTree() {
 		Node astRoot = toAstRoot();
+
 		if (astRoot == null)
 			return "";
-
 		StringBuilder buf = new StringBuilder(100);
 		printNode(buf, "", astRoot);
 		return buf.toString().replace(Node.SPLICE, "...");
@@ -267,8 +268,9 @@ class FlexmarkPreviewRenderer
 	private void printNode(StringBuilder buf, String indent, Node node) {
 		buf.append(indent);
 		node.astString(buf, true);
+
 		printAttributes(buf, node);
-		buf.append('\n');
+		buf.append(String.format("[%s]\n", node.getStartLineNumber()));
 
 		indent += "    ";
 		for (Node child = node.getFirstChild(); child != null; child = child.getNext())
@@ -302,4 +304,6 @@ class FlexmarkPreviewRenderer
 			attributes.addValue("data-pos", node.getStartOffset() + ":" + node.getEndOffset());
 		}
 	}
+
+
 }

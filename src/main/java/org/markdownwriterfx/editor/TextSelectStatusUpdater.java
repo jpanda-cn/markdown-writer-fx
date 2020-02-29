@@ -31,7 +31,7 @@ public class TextSelectStatusUpdater {
 			StringBuilder content = new StringBuilder();
 			if (countChars > 0) {
 				content
-					.append(String.format("%s  chars", countChars))
+					.append(String.format("%s  chars  ", countChars))
 				;
 				if (endLine != startLine) {
 					content.append(String.format(",%s line breaks;  ", endLine - startLine+1));

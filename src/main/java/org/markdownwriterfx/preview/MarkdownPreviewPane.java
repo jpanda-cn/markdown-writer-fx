@@ -86,6 +86,7 @@ public class MarkdownPreviewPane {
 		default String getHtml(org.commonmark.node.Node node) {
 			return "";
 		}
+
 	}
 
 	interface Preview {

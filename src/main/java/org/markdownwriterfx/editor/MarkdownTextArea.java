@@ -35,7 +35,7 @@ import org.fxmisc.richtext.StyledTextArea;
 import org.fxmisc.richtext.TextExt;
 import org.fxmisc.richtext.model.*;
 import org.markdownwriterfx.addons.GenericStyledAreaAddon;
-import org.markdownwriterfx.addons.SmartFormatAddon;
+import org.markdownwriterfx.options.Options;
 import org.reactfx.Guard;
 import org.reactfx.util.Either;
 import org.reactfx.value.SuspendableVal;
@@ -66,7 +66,7 @@ public class MarkdownTextArea
 			/* nodeFactory */ seg -> createNode(seg,
 				(text, styleClasses) -> text.getStyleClass().addAll(styleClasses))
 		);
-		
+
 		// compute scrollY
 		scrollY = Val.create(() -> {
 			double value = estimatedScrollYProperty().getValue().doubleValue();
@@ -74,13 +74,16 @@ public class MarkdownTextArea
 			return (maxValue > 0) ? Math.min(Math.max(value / maxValue, 0), 1) : 0;
 		}, estimatedScrollYProperty(), totalHeightEstimateProperty()).suspendable();
 
+		TextSelectStatusUpdater.of(Options.selectTextShowProperty()).apply(this);
 
 	}
-public void  addAddons(){
-	for (GenericStyledAreaAddon g : addons) {
-		g.apply(this);
+
+	public void addAddons() {
+		for (GenericStyledAreaAddon g : addons) {
+			g.apply(this);
+		}
 	}
-}
+
 	private static Node createNode(StyledSegment<Either<String, EmbeddedImage>, Collection<String>> seg,
 								   BiConsumer<? super TextExt, Collection<String>> applyStyle) {
 		return seg.getSegment().unify(
@@ -102,12 +105,14 @@ public void  addAddons(){
 //			System.out.println(String.format("%s,%d:%d",getText(start,start+replacement.length()),start,end));
 		});
 	}
+
 	private boolean isInNode(int start, int end, com.vladsch.flexmark.util.ast.Node node) {
-		if (end == start){
+		if (end == start) {
 			end++;
 		}
 		return start < node.getEndOffset() && end > node.getStartOffset();
 	}
+
 	@Override
 	public void setStyleSpans(int from, StyleSpans<? extends Collection<String>> styleSpans) {
 		suspendScrollYUntilLayout(() -> {
@@ -315,5 +320,6 @@ public void  addAddons(){
 		} else
 			super.requestFollowCaret();
 	}
+
 
 }

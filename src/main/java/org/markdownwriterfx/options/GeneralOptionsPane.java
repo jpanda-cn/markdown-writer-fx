@@ -120,7 +120,7 @@ class GeneralOptionsPane
 		SortedMap<String, Charset> availableCharsets = Charset.availableCharsets();
 
 		ArrayList<Item<String>> values = new ArrayList<>(1 + availableCharsets.size());
-		values.add(new Item<>(Messages.get("GeneralOptionsPane.platformDefault", Charset.defaultCharset().name()), null));
+		values.add(new Item<>(Messages.get("GeneralOptionsPane.platformDefault", Charset.defaultCharset().name()), Charset.defaultCharset().name()));
 		for (String name : availableCharsets.keySet())
 			values.add(new Item<>(name, name));
 		return values;
@@ -147,9 +147,9 @@ class GeneralOptionsPane
 		Options.setShowLineNo(showLineNoCheckBox.isSelected());
 		Options.setShowWhitespace(showWhitespaceCheckBox.isSelected());
 		Options.setShowImagesEmbedded(showImagesEmbeddedCheckBox.isSelected());
-
 		// file settings
 		Options.setLineSeparator(lineSeparatorField.getValue().value);
+		Options.setLineSeparatorName(lineSeparatorField.getValue().name);
 		Options.setEncoding(encodingField.getValue().value);
 		Options.setMarkdownFileExtensions(Utils.defaultIfEmpty(
 				markdownFileExtensionsField.getText().trim(),
