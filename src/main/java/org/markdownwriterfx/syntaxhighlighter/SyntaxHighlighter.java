@@ -95,6 +95,7 @@ public class SyntaxHighlighter
 						consumer.accept(amatcher.end(GROUP_ATTRIBUTE_NAME) - amatcher.start(GROUP_ATTRIBUTE_NAME), "attr-name");
 						consumer.accept(amatcher.end(GROUP_EQUAL_SYMBOL) - amatcher.end(GROUP_ATTRIBUTE_NAME), "punctuation");
 						consumer.accept(amatcher.end(GROUP_ATTRIBUTE_VALUE) - amatcher.end(GROUP_EQUAL_SYMBOL), "attr-value");
+
 						lastKwEnd = amatcher.end();
 					}
 					if(attributesText.length() > lastKwEnd)

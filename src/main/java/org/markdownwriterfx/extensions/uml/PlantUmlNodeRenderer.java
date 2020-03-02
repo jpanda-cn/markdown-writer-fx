@@ -33,7 +33,7 @@ public class PlantUmlNodeRenderer implements NodeRenderer {
 	public static DataKey<String> PLANT_UML_URL = new DataKey<>("PLANT_UML_URL", "https://g.gravizo.com/svg?");
 	public static DataKey<String> PLANT_UML_FLAG = new DataKey<>("PLANT_UML_FLAG", "plant-uml");
 	public static DataKey<Boolean> PLANT_UML_LOCAL_RENDER = new DataKey<>("PLANT_UML_LOCAL_RENDER", Boolean.TRUE);
-	public static DataKey<Boolean> PLANT_UML_LOCAL_RENDER_FORMAT_SVG = new DataKey<>("PLANT_UML_LOCAL_RENDER_FORMAT_SVG", Boolean.FALSE);
+	public static DataKey<Boolean> PLANT_UML_LOCAL_RENDER_FORMAT_SVG = new DataKey<>("PLANT_UML_LOCAL_RENDER_FORMAT_SVG", Boolean.TRUE);
 	protected DataHolder options;
 
 	public PlantUmlNodeRenderer(DataHolder options) {
@@ -76,11 +76,9 @@ public class PlantUmlNodeRenderer implements NodeRenderer {
 
 	public void renderLocal(FencedCodeBlock node, NodeRendererContext context, HtmlWriter html) {
 		html
-			.tag("p")
-			.attr("src", handlerText(node.getContentChars().normalizeEOL()))
-			.withAttr()
-			.raw(toSvg(node.getContentChars().normalizeEOL()))
-			.closeTag("p");
+//			.attr("src", handlerText(node.getContentChars().normalizeEOL()))
+//			.withAttr()
+			.raw(toSvg(node.getContentChars().normalizeEOL()));
 	}
 
 	public String toSvg(String uml) {
@@ -88,8 +86,10 @@ public class PlantUmlNodeRenderer implements NodeRenderer {
 			return "";
 		}
 		try {
-			return SvgGeneratorService.getInstance().generateSvgFromPlantUml(uml, plantUmlLocalRenderFormatSvg);
-		}catch (PlantumlRuntimeException e){
+			String svg = SvgGeneratorService.getInstance().generateSvgFromPlantUml(uml, plantUmlLocalRenderFormatSvg);
+			return svg.replaceAll("\r\n","");
+//			return SvgGeneratorService.getInstance().generateSvgFromPlantUml(uml, plantUmlLocalRenderFormatSvg);
+		} catch (PlantumlRuntimeException e) {
 			return "";
 		}
 	}
