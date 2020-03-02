@@ -1,5 +1,6 @@
 package org.markdownwriterfx.renderer;
 
+import com.credibledoc.plantuml.exception.PlantumlRuntimeException;
 import com.credibledoc.plantuml.svggenerator.SvgGeneratorService;
 import com.vladsch.flexmark.ast.FencedCodeBlock;
 import com.vladsch.flexmark.html.HtmlWriter;
@@ -9,6 +10,7 @@ import com.vladsch.flexmark.html.renderer.NodeRendererFactory;
 import com.vladsch.flexmark.html.renderer.NodeRenderingHandler;
 import com.vladsch.flexmark.util.data.DataHolder;
 import com.vladsch.flexmark.util.data.DataKey;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -82,7 +84,14 @@ public class PlantUmlNodeRenderer implements NodeRenderer {
 	}
 
 	public String toSvg(String uml) {
-		return SvgGeneratorService.getInstance().generateSvgFromPlantUml(uml, plantUmlLocalRenderFormatSvg);
+		if (StringUtils.isBlank(uml)) {
+			return "";
+		}
+		try {
+			return SvgGeneratorService.getInstance().generateSvgFromPlantUml(uml, plantUmlLocalRenderFormatSvg);
+		}catch (PlantumlRuntimeException e){
+			return "";
+		}
 	}
 
 	protected String handlerText(String url) {

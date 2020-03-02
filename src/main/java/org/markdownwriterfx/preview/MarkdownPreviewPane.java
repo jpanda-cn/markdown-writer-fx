@@ -144,6 +144,7 @@ public class MarkdownPreviewPane {
 		path.addListener((observable, oldValue, newValue) -> update());
 		markdownText.addListener((observable, oldValue, newValue) -> update());
 		markdownAST.addListener((observable, oldValue, newValue) -> update());
+		scrollY.addListener((observable, oldValue, newValue) -> scrollY());
 		updateY.addListener((observable, oldValue, newValue) -> scrollY());
 		editorSelection.addListener((observable, oldValue, newValue) -> editorSelectionChanged());
 

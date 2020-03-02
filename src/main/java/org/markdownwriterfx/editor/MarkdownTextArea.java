@@ -74,9 +74,19 @@ public class MarkdownTextArea
 			double maxValue = totalHeightEstimateProperty().getOrElse(0.).doubleValue() - getHeight();
 			return (maxValue > 0) ? Math.min(Math.max(value / maxValue, 0), 1) : 0;
 		}, estimatedScrollYProperty(), totalHeightEstimateProperty()).suspendable();
+
+
 		// record last update time
-		updateY = Val.create(() -> Long.valueOf(System.currentTimeMillis()).doubleValue(), estimatedScrollYProperty(), totalHeightEstimateProperty()).suspendable();
-		
+		final double[] lastUpdateY = {0D};
+		updateY = Val.create(() -> {
+			if (scrollY.getValue() == 1D) {
+				lastUpdateY[0] = Long.valueOf(System.currentTimeMillis()).doubleValue();
+				return lastUpdateY[0];
+			}
+			return lastUpdateY[0];
+		}, estimatedScrollYProperty(), totalHeightEstimateProperty()).suspendable();
+
+
 		TextSelectStatusUpdater.of(Options.selectTextShowProperty()).apply(this);
 
 	}
@@ -317,6 +327,7 @@ public class MarkdownTextArea
 
 	@Override
 	public void requestFollowCaret() {
+
 		if (disableFollowCaret) {
 			disableFollowCaret = false;
 			requestLayout();
