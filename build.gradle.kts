@@ -82,6 +82,8 @@ dependencies {
 
 	val javafxWebviewDebuggerVersion="0.7.6"
 	compile( "com.vladsch.javafx-webview-debugger:javafx-webview-debugger:${javafxWebviewDebuggerVersion}" )
+	val plantumlCoreVersion="1.0.13"
+	compile( "com.credibledoc:plantuml-core:${plantumlCoreVersion}" )
 
 	if( javaCompatibility >= JavaVersion.VERSION_11 ) {
 		val javafxVersion = "11.0.2"
