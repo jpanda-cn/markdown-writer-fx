@@ -78,7 +78,13 @@ public class PlantUmlNodeRenderer implements NodeRenderer {
 		html
 //			.attr("src", handlerText(node.getContentChars().normalizeEOL()))
 //			.withAttr()
-			.raw(toSvg(node.getContentChars().normalizeEOL()));
+			.attr("id", String.format("_%s_%d",node.getNodeName(),node.hashCode()))
+			.withAttr()
+			.tag("p")
+			.raw(toSvg(node.getContentChars().normalizeEOL()))
+			.closeTag("p")
+		;
+
 	}
 
 	public String toSvg(String uml) {
@@ -87,7 +93,7 @@ public class PlantUmlNodeRenderer implements NodeRenderer {
 		}
 		try {
 			String svg = SvgGeneratorService.getInstance().generateSvgFromPlantUml(uml, plantUmlLocalRenderFormatSvg);
-			return svg.replaceAll("\r\n","");
+			return svg.replaceAll("\r\n", "");
 //			return SvgGeneratorService.getInstance().generateSvgFromPlantUml(uml, plantUmlLocalRenderFormatSvg);
 		} catch (PlantumlRuntimeException e) {
 			return "";

@@ -43,7 +43,6 @@ import com.vladsch.flexmark.util.html.Attributes;
 import com.vladsch.flexmark.util.sequence.BasedSequence;
 import org.jetbrains.annotations.NotNull;
 import org.markdownwriterfx.addons.PreviewRendererAddon;
-import org.markdownwriterfx.extensions.id.AllHtmlIdGenerator;
 import org.markdownwriterfx.extensions.id.AutoIncrementIdAttributeProvider;
 import org.markdownwriterfx.options.MarkdownExtensions;
 import org.markdownwriterfx.util.Range;
@@ -177,7 +176,7 @@ class FlexmarkPreviewRenderer
 			builder.setAll(dataSet);
 			builder.attributeProviderFactory(new MyAttributeProvider.Factory())
 				.attributeProviderFactory(new AutoIncrementIdAttributeProvider.Factory());
-			builder.htmlIdGeneratorFactory(new AllHtmlIdGenerator.Factory());
+//			builder.htmlIdGeneratorFactory(new AllHtmlIdGenerator.Factory());
 			builder.extensions(MarkdownExtensions.getFlexmarkExtensions());
 
 //		if (!source)

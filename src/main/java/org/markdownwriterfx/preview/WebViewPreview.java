@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2015 Karl Tauber <karl at jformdesigner dot com>
  * All rights reserved.
@@ -33,7 +34,9 @@ import com.vladsch.flexmark.util.ast.NodeVisitor;
 import com.vladsch.flexmark.util.ast.Visitor;
 import javafx.concurrent.Worker.State;
 import javafx.scene.control.IndexRange;
+import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
+import netscape.javascript.JSObject;
 import org.jetbrains.annotations.NotNull;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.preview.MarkdownPreviewPane.PreviewContext;
@@ -118,7 +121,7 @@ class WebViewPreview
 		}
 		lastEditorSelection = context.getEditorSelection();
 
-		
+
 		Path path = context.getPath();
 		String base = (path != null)
 			? ("<base href=\"" + path.getParent().toUri().toString() + "\">\n")
@@ -159,6 +162,44 @@ class WebViewPreview
 			webView.getEngine().executeScript("preview.scrollTo(" + value + ");");
 		});
 	}
+
+	@Override
+	public void scrollY(PreviewContext context, PreviewSyncNotify value) {
+		runWhenLoaded(() -> {
+			if (value.getNotifyType() == PreviewSyncNotify.NotifyType.SCROLL) {
+				scrollY(context, value.getOriginalProportion());
+				return;
+			}
+			// Handling cursor movement events
+			JSObject document = (JSObject) webView.getEngine().executeScript("document");
+			JSObject choose = (JSObject) document.call("getElementById", value.getKey());
+			if (choose == null) {
+				// Unable to get the currently selected element
+				// It may be that the element is newly added and has not been added to the DOM
+				// ????????????????
+//				if (value.getLineProportion() == 1) {
+//					scrollY(context, value.getLineProportion());
+//				}
+				return;
+			}
+
+			JSObject preview = (JSObject) webView.getEngine().executeScript("preview");
+			JSObject posArray = (JSObject) preview.call("getAbsPosition", choose);
+			Integer pos = (Integer) posArray.getMember("0");
+
+			Number chooseHeight = (Number) ((JSObject) choose.call("getBoundingClientRect")).getMember("height");
+
+			JSObject window = (JSObject) webView.getEngine().executeScript("window");
+			Integer windowHeight = (Integer) window.getMember("innerHeight");
+			double offset = windowHeight / 2;
+			if (chooseHeight.doubleValue() > offset) {
+				offset = windowHeight - chooseHeight.doubleValue();
+			}
+			// Center selected element
+			window.call("scrollTo", 0, pos - offset);
+		});
+	}
+
 
 	@Override
 	public void editorSelectionChanged(PreviewContext context, IndexRange range) {

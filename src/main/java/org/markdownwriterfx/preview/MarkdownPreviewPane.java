@@ -29,7 +29,9 @@ package org.markdownwriterfx.preview;
 
 import com.vladsch.flexmark.util.ast.Node;
 import javafx.application.Platform;
-import javafx.beans.property.*;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.control.IndexRange;
 import javafx.scene.layout.BorderPane;
@@ -96,6 +98,10 @@ public class MarkdownPreviewPane {
 
 		void scrollY(PreviewContext context, double value);
 
+		default void scrollY(PreviewContext context, PreviewSyncNotify value) {
+			scrollY(context, value.getOriginalProportion());
+		}
+
 		void editorSelectionChanged(PreviewContext context, IndexRange range);
 	}
 
@@ -144,13 +150,13 @@ public class MarkdownPreviewPane {
 		path.addListener((observable, oldValue, newValue) -> update());
 		markdownText.addListener((observable, oldValue, newValue) -> update());
 		markdownAST.addListener((observable, oldValue, newValue) -> update());
-		scrollY.addListener((observable, oldValue, newValue) -> scrollY());
-		updateY.addListener((observable, oldValue, newValue) -> scrollY());
+		previewSyncProperty().addListener((observable, oldValue, newValue) -> scrollY());
 		editorSelection.addListener((observable, oldValue, newValue) -> editorSelectionChanged());
 
 		Options.additionalCSSProperty().addListener(new WeakChangeListener<String>(
 			(observable, oldValue, newValue) -> update()));
 	}
+
 
 	public static boolean hasExternalPreview() {
 		return ExternalPreview.hasExternalPreview();
@@ -240,9 +246,16 @@ public class MarkdownPreviewPane {
 
 		Platform.runLater(() -> {
 			scrollYrunLaterPending = false;
-			activePreview.scrollY(previewContext, scrollY.get());
+			if (previewSyncProperty().get() != null) {
+				if (previewSyncProperty().get().getNotifyType() == PreviewSyncNotify.NotifyType.SCROLL) {
+					activePreview.scrollY(previewContext, previewSync.get().getOriginalProportion());
+				} else {
+					activePreview.scrollY(previewContext, previewSync.get());
+				}
+			}
 		});
 	}
+
 
 	private boolean editorSelectionChangedRunLaterPending;
 
@@ -287,18 +300,6 @@ public class MarkdownPreviewPane {
 		return markdownAST;
 	}
 
-	// 'scrollY' property
-	private final DoubleProperty scrollY = new SimpleDoubleProperty();
-
-	public DoubleProperty scrollYProperty() {
-		return scrollY;
-	}
-
-	private final DoubleProperty updateY = new SimpleDoubleProperty();
-
-	public DoubleProperty updateYProperty() {
-		return updateY;
-	}
 
 	// 'editorSelection' property
 	private final ObjectProperty<IndexRange> editorSelection = new SimpleObjectProperty<>();
@@ -306,4 +307,13 @@ public class MarkdownPreviewPane {
 	public ObjectProperty<IndexRange> editorSelectionProperty() {
 		return editorSelection;
 	}
+
+
+	// 'previewSync' property
+	private final ObjectProperty<PreviewSyncNotify> previewSync = new SimpleObjectProperty<>();
+
+	public ObjectProperty<PreviewSyncNotify> previewSyncProperty() {
+		return previewSync;
+	}
+
 }

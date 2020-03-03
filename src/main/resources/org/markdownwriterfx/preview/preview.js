@@ -27,8 +27,13 @@
 
 var preview = {
 
-	scrollTo: function(value) {
+	scrollTo: function (value) {
 		window.scrollTo(0, (document.body.scrollHeight - window.innerHeight) * value);
+	},
+	scrollById: function (id, value) {
+		var e = document.getElementById(id);
+		var pos = this.getAbsPosition(e);
+		window.scrollTo(0, pos[0] + value);
 	},
 
 	highlightTags: ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
@@ -38,7 +43,7 @@ var preview = {
 
 	highlightedNodes: [],
 
-	highlightNodesAt: function(offset) {
+	highlightNodesAt: function (offset) {
 		// remove previous highlights
 		for (node of this.highlightedNodes)
 			node.classList.remove('mwfx-editor-selection');
@@ -60,7 +65,7 @@ var preview = {
 		}
 	},
 
-	findNodesAt: function(node, offset, result) {
+	findNodesAt: function (node, offset, result) {
 		if (node.dataset.pos != null) {
 			// get value of data-pos attribute
 			var pos = node.dataset.pos.split(':');
@@ -74,7 +79,33 @@ var preview = {
 		}
 
 		var children = node.children
-		for (var i=0; i < children.length; i++)
+		for (var i = 0; i < children.length; i++)
 			this.findNodesAt(children[i], offset, result);
 	},
+	getAbsPosition: function (el) {
+		if (el === null || el === undefined) {
+			return [0,0];
+		}
+		var el2 = el;
+		var curtop = 0;
+		var curleft = 0;
+		if (document.getElementById || document.all) {
+			do {
+				curleft += el.offsetLeft - el.scrollLeft;
+				curtop += el.offsetTop - el.scrollTop;
+				el = el.offsetParent;
+				el2 = el2.parentNode;
+				while (el2 != el) {
+					curleft -= el2.scrollLeft;
+					curtop -= el2.scrollTop;
+					el2 = el2.parentNode;
+				}
+			} while (el.offsetParent);
+
+		} else if (document.layers) {
+			curtop += el.y;
+			curleft += el.x;
+		}
+		return [curtop, curleft];
+	}
 };

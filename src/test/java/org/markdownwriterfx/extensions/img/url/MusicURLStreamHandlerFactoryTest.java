@@ -12,7 +12,7 @@ import java.nio.file.Paths;
  * @version 1.0
  * @since 2020/2/25 15:34
  */
-public class ImageURLStreamHandlerFactoryTest {
+public class MusicURLStreamHandlerFactoryTest {
 
 	@Test
 	public void loadUrl() throws Exception {

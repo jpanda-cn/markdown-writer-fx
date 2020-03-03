@@ -27,9 +27,9 @@
 
 package org.markdownwriterfx.editor;
 
-import com.vladsch.flexmark.ast.InlineLinkNode;
-import com.vladsch.flexmark.ast.Text;
+import com.vladsch.flexmark.ast.*;
 import com.vladsch.flexmark.parser.Parser;
+import com.vladsch.flexmark.util.ast.Document;
 import com.vladsch.flexmark.util.ast.Node;
 import com.vladsch.flexmark.util.sequence.BasedSequence;
 import javafx.application.Platform;
@@ -38,7 +38,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.geometry.Insets;
+import javafx.geometry.Bounds;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
@@ -47,6 +47,8 @@ import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.Caret.CaretVisibility;
 import org.fxmisc.richtext.CaretNode;
 import org.fxmisc.richtext.CharacterHit;
+import org.fxmisc.richtext.Selection;
+import org.fxmisc.richtext.SelectionImpl;
 import org.fxmisc.undo.UndoManager;
 import org.fxmisc.wellbehaved.event.Nodes;
 import org.markdownwriterfx.controls.BottomSlidePane;
@@ -55,12 +57,16 @@ import org.markdownwriterfx.editor.MarkdownSyntaxHighlighter.ExtraStyledRanges;
 import org.markdownwriterfx.options.MarkdownExtensions;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.preview.MarkdownPreviewPane;
+import org.markdownwriterfx.preview.PreviewSyncNotify;
 import org.markdownwriterfx.util.StringDiffusionMatch;
+import org.reactfx.util.Either;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyCombination.*;
@@ -92,6 +98,7 @@ public class MarkdownEditorPane {
 	private final InvalidationListener optionsListener;
 	private String lineSeparator = getLineSeparatorOrDefault();
 
+	private Selection<Collection<String>, Either<String, EmbeddedImage>, Collection<String>> extraSelection;
 
 	private MarkdownPreviewPane markdownPreviewPane;
 
@@ -116,6 +123,12 @@ public class MarkdownEditorPane {
 		textArea.setOnDragExited(this::onDragExited);
 		textArea.setOnDragOver(this::onDragOver);
 		textArea.setOnDragDropped(this::onDragDropped);
+		textArea.caretBoundsProperty().addListener((observable, oldValue, newValue) -> flushViewY());
+
+		extraSelection = new SelectionImpl<>("", textArea, path -> {
+			path.setVisible(false);
+		});
+		textArea.addSelection(extraSelection);
 
 		smartEdit = new SmartEdit(this, textArea);
 
@@ -195,7 +208,9 @@ public class MarkdownEditorPane {
 			});
 		});
 
+		scrollYProperty().addListener((observable, oldValue, newValue) -> flushPreview());
 
+//		updateYProperty().addListener((observable, oldValue, newValue) -> flushPreview());
 	}
 
 	private void updateFont() {
@@ -592,7 +607,8 @@ public class MarkdownEditorPane {
 	}
 
 	public IndexRange selectDiffuse(IndexRange range) {
-		return selectDiffuse(loadNode(getMarkdownAST(), range), range);
+		Node finalNode = loadNode(getMarkdownAST(), range);
+		return selectDiffuse(finalNode, range);
 	}
 
 	public IndexRange selectDiffuse(Node match, IndexRange range) {
@@ -685,6 +701,122 @@ public class MarkdownEditorPane {
 		return null;
 	}
 
+	private void flushPreview() {
+		// ??y?
+		PreviewSyncNotify notify = new PreviewSyncNotify();
+		notify.setNotifyType(PreviewSyncNotify.NotifyType.SCROLL);
+		notify.setOriginalProportion(scrollYProperty().getValue());
+		notify.setLineProportion(((double) textArea.getCurrentParagraph() + 1) / (double) textArea.getParagraphs().size() + 1 / (double) textArea.getParagraphs().size());
+		previewSync.set(notify);
+	}
+
+	private void flushViewY() {
+		// Get the element at the current cursor
+		IndexRange range = new IndexRange(textArea.getCaretPosition(), textArea.getCaretPosition());
+		Node n = loadNode(getMarkdownAST(), range);
+		if (n == null) {
+			return;
+		}
+		if (n instanceof Document) {
+			//New content, no node yet
+			n = loadNearNode(n, range);
+		}
+		if (n == null) {
+			return;
+		}
+		// Gets the element that the cursor is sitting around. By default, it gets forward.
+		// If there isn't one, it searches backwards. If it doesn't, it gets the parent element.
+		n = loadHaveId(n);
+		if (n == null) {
+			return;
+		}
+
+		try {
+			extraSelection.selectRange(n.getStartOffset(), n.getEndOffset());
+
+			// ???????????
+
+			// ??ID
+			String id = String.format("_%s_%d", n.getNodeName(), n.hashCode());
+			// ??????
+			double offset = 0;
+			Optional<Bounds> b = extraSelection.getSelectionBounds();
+			if (!b.isPresent()) {
+				return;
+			}
+			offset = textArea.sceneToLocal(b.get()).getMaxY();
+			// ??
+			PreviewSyncNotify notify = new PreviewSyncNotify();
+			notify.setKey(id);
+			notify.setNotifyType(PreviewSyncNotify.NotifyType.CARE);
+			notify.setRange(new IndexRange(n.getStartOffset(), n.getEndOffset()));
+			notify.setRangeHeight(b.get().getHeight());
+			notify.setRangeY(b.get().getMinY());
+			notify.setScrollY(textArea.getEstimatedScrollY());
+			notify.setTotalScrollY(textArea.totalHeightEstimateProperty().getValue());
+			notify.setRangeBounds(b.get());
+			notify.setOriginalProportion(textArea.getEstimatedScrollY() / textArea.getTotalHeightEstimate());
+			notify.setLineProportion(((double) textArea.getCurrentParagraph() + 1) / (double) textArea.getParagraphs().size() + 1 / (double) textArea.getParagraphs().size());
+
+			previewSync.set(notify);
+		} catch (Exception e) {
+			extraSelection.deselect();
+		}
+	}
+
+	public Node loadNearNode(Node node, IndexRange range) {
+		for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {
+			// Current position gap
+			if (child.getStartOffset() >= range.getEnd()) {
+				// Add in first position
+				return child;
+			}
+			// Sandwiched between or at the end
+			boolean matchPre = child.getEndOffset() <= range.getStart();
+			boolean matchNext = child.getNext() == null || child.getNext().getStartOffset() >= range.getEnd();
+			if (matchPre && matchNext) {
+				return child;
+			}
+			// not find in child ,so return parent
+		}
+		return node;
+	}
+
+	public Node loadHaveId(Node node) {
+		if (hasIdNode(node)) {
+			return node;
+		}
+		// The current element has no ID attribute
+		for (Node pre = node.getFirstChild(); pre != null; pre = pre.getNext()) {
+			if (hasIdNode(pre)) {
+				return pre;
+			}
+		}
+		// Get the element after the current child element
+//		for (Node next = node.getNext(); next != null; next = next.getNext()) {
+//			if (hasIdNode(next)) {
+//				return next;
+//			}
+//		}
+		// find in parent
+		if (node.getParent() == null) {
+			return node;
+		}
+		return loadHaveId(node.getParent());
+	}
+
+	public boolean hasIdNode(Node node) {
+		return (node instanceof Heading
+			|| node instanceof Image
+			|| node instanceof Paragraph
+			|| node instanceof Code
+			|| node instanceof BulletList
+			|| node instanceof BulletListItem
+			|| node instanceof FencedCodeBlock
+			|| node instanceof Link)
+			;
+	}
+
 	private boolean beIncludeNode(Node node, IndexRange range) {
 
 		return node.getStartOffset() <= range.getStart() && node.getEndOffset() >= range.getEnd();
@@ -695,5 +827,13 @@ public class MarkdownEditorPane {
 
 		return seq.getStartOffset() <= range.getStart() && seq.getEndOffset() >= range.getEnd();
 
+	}
+
+
+	// 'previewSync' property
+	private final ObjectProperty<PreviewSyncNotify> previewSync = new SimpleObjectProperty<>();
+
+	public ObjectProperty<PreviewSyncNotify> previewSyncProperty() {
+		return previewSync;
 	}
 }

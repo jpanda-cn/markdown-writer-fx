@@ -88,7 +88,7 @@ public class MarkdownTextArea
 
 
 		TextSelectStatusUpdater.of(Options.selectTextShowProperty()).apply(this);
-
+		
 	}
 
 	public void addAddons() {
