@@ -54,7 +54,6 @@ public class MarkdownTextArea
 	private static final ServiceLoader<GenericStyledAreaAddon> addons = ServiceLoader.load(GenericStyledAreaAddon.class);
 	// suspendable scrollY value to reduce enormous amount of change events on estimatedScrollY and totalHeightEstimate
 	final SuspendableVal<Double> scrollY;
-	final SuspendableVal<Double> updateY;
 	private Guard scrollYguard;
 
 	public MarkdownTextArea() {
@@ -76,19 +75,10 @@ public class MarkdownTextArea
 		}, estimatedScrollYProperty(), totalHeightEstimateProperty()).suspendable();
 
 
-		// record last update time
-		final double[] lastUpdateY = {0D};
-		updateY = Val.create(() -> {
-			if (scrollY.getValue() == 1D) {
-				lastUpdateY[0] = Long.valueOf(System.currentTimeMillis()).doubleValue();
-				return lastUpdateY[0];
-			}
-			return lastUpdateY[0];
-		}, estimatedScrollYProperty(), totalHeightEstimateProperty()).suspendable();
 
 
 		TextSelectStatusUpdater.of(Options.selectTextShowProperty()).apply(this);
-		
+
 	}
 
 	public void addAddons() {
@@ -107,15 +97,9 @@ public class MarkdownTextArea
 	@Override
 	public void replace(int start, int end, StyledDocument<Collection<String>, Either<String, EmbeddedImage>, Collection<String>> replacement) {
 		suspendScrollYUntilLayout(() -> {
-			// start != end  replace
-
-			// old value
-//			System.out.println(String.format("%s,%d:%d",getText(start,end),start,end));
 
 			super.replace(start, end, replacement);
 
-			// new value
-//			System.out.println(String.format("%s,%d:%d",getText(start,start+replacement.length()),start,end));
 		});
 	}
 

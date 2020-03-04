@@ -20,7 +20,7 @@ public class AutoIncrementIdAttributeProvider implements AttributeProvider {
 	
 	@Override
 	public void setAttributes(@NotNull Node node, @NotNull AttributablePart part, @NotNull Attributes attributes) {
-		attributes.addValue("id", String.format("%s@%d",node.getNodeName(),node.hashCode()));
+		attributes.addValue("id", String.format("_%s_%d",node.getNodeName(),node.hashCode()));
 	}
 
 	public static class Factory extends IndependentAttributeProviderFactory {

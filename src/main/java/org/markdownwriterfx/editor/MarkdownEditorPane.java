@@ -49,6 +49,7 @@ import org.fxmisc.richtext.CaretNode;
 import org.fxmisc.richtext.CharacterHit;
 import org.fxmisc.richtext.Selection;
 import org.fxmisc.richtext.SelectionImpl;
+import org.fxmisc.richtext.model.TwoDimensional;
 import org.fxmisc.undo.UndoManager;
 import org.fxmisc.wellbehaved.event.Nodes;
 import org.markdownwriterfx.controls.BottomSlidePane;
@@ -97,7 +98,8 @@ public class MarkdownEditorPane {
 	private Parser parser;
 	private final InvalidationListener optionsListener;
 	private String lineSeparator = getLineSeparatorOrDefault();
-
+	private int lastShowFirstLine = 0;
+	private int lastSelectLine = 0;
 	private Selection<Collection<String>, Either<String, EmbeddedImage>, Collection<String>> extraSelection;
 
 	private MarkdownPreviewPane markdownPreviewPane;
@@ -123,8 +125,27 @@ public class MarkdownEditorPane {
 		textArea.setOnDragExited(this::onDragExited);
 		textArea.setOnDragOver(this::onDragOver);
 		textArea.setOnDragDropped(this::onDragDropped);
-		textArea.caretBoundsProperty().addListener((observable, oldValue, newValue) -> flushViewY());
+		textArea.caretPositionProperty().addListener((observable, oldValue, newValue) -> {
+			flushViewY();
+		});
+		textArea.estimatedScrollYProperty().addListener((observable, oldValue, newValue) -> {
+			int firstPar = textArea.firstVisibleParToAllParIndex();
+			int lastPar = lastShowFirstLine;
+			int diff = firstPar - lastPar;
+			// ??????
+			textArea.moveTo(Math.min(lastSelectLine + diff, textArea.getParagraphs().size()), 0);
+		});
 
+		textArea.addEventFilter(ScrollEvent.ANY, e -> {
+			if (textArea.getEstimatedScrollY() == 0D && e.getDeltaY() > 0) {
+				textArea.moveTo(Math.max(lastSelectLine - 1, 0), 0);
+				e.consume();
+			}
+			if (e.getDeltaY() < 0 && textArea.getEstimatedScrollY() + textArea.getViewportHeight() == textArea.getTotalHeightEstimate()) {
+				textArea.moveTo(Math.max(lastSelectLine + 1, 0), 0);
+				e.consume();
+			}
+		});
 		extraSelection = new SelectionImpl<>("", textArea, path -> {
 			path.setVisible(false);
 		});
@@ -139,6 +160,7 @@ public class MarkdownEditorPane {
 			consume(keyPressed(W, ALT_DOWN), this::showWhitespace),
 			consume(keyPressed(I, ALT_DOWN), this::showImagesEmbedded),
 			consume(keyPressed(W, CONTROL_DOWN), this::selectWords)
+//			consume(keyPressed(A, CONTROL_DOWN), event -> selectAll())
 		));
 
 
@@ -147,6 +169,7 @@ public class MarkdownEditorPane {
 
 		// create border pane
 		borderPane = new BottomSlidePane(scrollPane);
+
 
 		overlayGraphicFactory = new ParagraphOverlayGraphicFactory(textArea);
 		textArea.setParagraphGraphicFactory(overlayGraphicFactory);
@@ -207,10 +230,6 @@ public class MarkdownEditorPane {
 					textArea.selectRange(caretPosition, caretPosition);
 			});
 		});
-
-		scrollYProperty().addListener((observable, oldValue, newValue) -> flushPreview());
-
-//		updateYProperty().addListener((observable, oldValue, newValue) -> flushPreview());
 	}
 
 	private void updateFont() {
@@ -338,9 +357,6 @@ public class MarkdownEditorPane {
 
 	}
 
-	public ObservableValue<Double> updateYProperty() {
-		return textArea.updateY;
-	}
 
 	// 'path' property
 	private final ObjectProperty<Path> path = new SimpleObjectProperty<>();
@@ -701,70 +717,67 @@ public class MarkdownEditorPane {
 		return null;
 	}
 
-	private void flushPreview() {
-		// ??y?
-		PreviewSyncNotify notify = new PreviewSyncNotify();
-		notify.setNotifyType(PreviewSyncNotify.NotifyType.SCROLL);
-		notify.setOriginalProportion(scrollYProperty().getValue());
-		notify.setLineProportion(((double) textArea.getCurrentParagraph() + 1) / (double) textArea.getParagraphs().size() + 1 / (double) textArea.getParagraphs().size());
-		previewSync.set(notify);
-	}
 
 	private void flushViewY() {
+
 		// Get the element at the current cursor
 		IndexRange range = new IndexRange(textArea.getCaretPosition(), textArea.getCaretPosition());
 		Node n = loadNode(getMarkdownAST(), range);
-		if (n == null) {
-			return;
-		}
-		if (n instanceof Document) {
+		boolean isDocument = n instanceof Document;
+		if (isDocument) {
 			//New content, no node yet
 			n = loadNearNode(n, range);
-		}
-		if (n == null) {
-			return;
 		}
 		// Gets the element that the cursor is sitting around. By default, it gets forward.
 		// If there isn't one, it searches backwards. If it doesn't, it gets the parent element.
 		n = loadHaveId(n);
-		if (n == null) {
-			return;
-		}
 
 		try {
-			extraSelection.selectRange(n.getStartOffset(), n.getEndOffset());
-
-			// ???????????
-
-			// ??ID
-			String id = String.format("_%s_%d", n.getNodeName(), n.hashCode());
-			// ??????
-			double offset = 0;
-			Optional<Bounds> b = extraSelection.getSelectionBounds();
-			if (!b.isPresent()) {
-				return;
+			IndexRange indexRange;// ??ID
+			String id;
+			if (n == null) {
+				indexRange = new IndexRange(0, 1);
+				id = null;
+			} else {
+				indexRange = new IndexRange(n.getStartOffset(), n.getEndOffset());
+				id = String.format("_%s_%d", n.getNodeName(), n.hashCode());
 			}
-			offset = textArea.sceneToLocal(b.get()).getMaxY();
-			// ??
+			extraSelection.selectRange(indexRange.getStart(), indexRange.getEnd());
+
+			Optional<Bounds> b = extraSelection.getSelectionBounds();
+
 			PreviewSyncNotify notify = new PreviewSyncNotify();
 			notify.setKey(id);
-			notify.setNotifyType(PreviewSyncNotify.NotifyType.CARE);
-			notify.setRange(new IndexRange(n.getStartOffset(), n.getEndOffset()));
-			notify.setRangeHeight(b.get().getHeight());
-			notify.setRangeY(b.get().getMinY());
+
+			notify.setRange(indexRange);
 			notify.setScrollY(textArea.getEstimatedScrollY());
 			notify.setTotalScrollY(textArea.totalHeightEstimateProperty().getValue());
-			notify.setRangeBounds(b.get());
-			notify.setOriginalProportion(textArea.getEstimatedScrollY() / textArea.getTotalHeightEstimate());
 			notify.setLineProportion(((double) textArea.getCurrentParagraph() + 1) / (double) textArea.getParagraphs().size() + 1 / (double) textArea.getParagraphs().size());
 
+			if (b.isPresent()) {
+				notify.setRangeHeight(b.get().getHeight());
+				notify.setRangeY(b.get().getMinY());
+				notify.setRangeBounds(b.get());
+			}
+
+			notify.setNotifyType(PreviewSyncNotify.NotifyType.CARE);
+			notify.setOriginalProportion(textArea.getEstimatedScrollY() / textArea.getTotalHeightEstimate());
+			// Cursor position
+			int lastCaretPosition = textArea.getCaretPosition();
+			lastShowFirstLine = textArea.firstVisibleParToAllParIndex();
+			lastSelectLine = textArea.offsetToPosition(lastCaretPosition, TwoDimensional.Bias.Forward).getMajor();
+
 			previewSync.set(notify);
+
 		} catch (Exception e) {
 			extraSelection.deselect();
 		}
 	}
 
 	public Node loadNearNode(Node node, IndexRange range) {
+		if (node == null) {
+			return null;
+		}
 		for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {
 			// Current position gap
 			if (child.getStartOffset() >= range.getEnd()) {
@@ -783,21 +796,32 @@ public class MarkdownEditorPane {
 	}
 
 	public Node loadHaveId(Node node) {
+		if (node == null) {
+			return null;
+		}
 		if (hasIdNode(node)) {
 			return node;
 		}
 		// The current element has no ID attribute
-		for (Node pre = node.getFirstChild(); pre != null; pre = pre.getNext()) {
-			if (hasIdNode(pre)) {
-				return pre;
+		for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {
+			if (hasIdNode(child)) {
+				return child;
 			}
 		}
-		// Get the element after the current child element
-//		for (Node next = node.getNext(); next != null; next = next.getNext()) {
-//			if (hasIdNode(next)) {
-//				return next;
-//			}
-//		}
+
+		if (node.getParent() instanceof Document) {
+			for (Node pre = node.getPrevious(); pre != null; pre = pre.getNext()) {
+				if (hasIdNode(pre)) {
+					return pre;
+				}
+			}
+			for (Node next = node.getNext(); next != null; next = next.getNext()) {
+				if (hasIdNode(next)) {
+					return next;
+				}
+			}
+		}
+
 		// find in parent
 		if (node.getParent() == null) {
 			return node;

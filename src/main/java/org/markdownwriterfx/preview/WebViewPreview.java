@@ -34,9 +34,9 @@ import com.vladsch.flexmark.util.ast.NodeVisitor;
 import com.vladsch.flexmark.util.ast.Visitor;
 import javafx.concurrent.Worker.State;
 import javafx.scene.control.IndexRange;
-import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.preview.MarkdownPreviewPane.PreviewContext;
@@ -166,37 +166,80 @@ class WebViewPreview
 	@Override
 	public void scrollY(PreviewContext context, PreviewSyncNotify value) {
 		runWhenLoaded(() -> {
-			if (value.getNotifyType() == PreviewSyncNotify.NotifyType.SCROLL) {
+			// Determine if there is a selected element,
+			// if there is a selected element,
+			// it means that the calculation will be processed according to the relative position
+
+			boolean hasSelectedElement = StringUtils.isNotBlank(value.getKey());
+
+			boolean isScroll = PreviewSyncNotify.NotifyType.SCROLL == value.getNotifyType();
+
+			if (!hasSelectedElement) {
+				if (!isScroll) {
+
+					return;
+				}
 				scrollY(context, value.getOriginalProportion());
+				// Offset element without selection
 				return;
 			}
+
+			// Load the Y coordinate of the currently selected element
+			Number selectedElementHeight = 0;
+			Integer selectedElementY = 0;
+
 			// Handling cursor movement events
 			JSObject document = (JSObject) webView.getEngine().executeScript("document");
 			JSObject choose = (JSObject) document.call("getElementById", value.getKey());
 			if (choose == null) {
-				// Unable to get the currently selected element
-				// It may be that the element is newly added and has not been added to the DOM
-				// ????????????????
-//				if (value.getLineProportion() == 1) {
-//					scrollY(context, value.getLineProportion());
-//				}
-				return;
+				// No selected element, no need to calculate the position of the specified element
+				if (!isScroll) {
+					return;
+				}
+			} else {
+				selectedElementHeight = (Number) ((JSObject) choose.call("getBoundingClientRect")).getMember("height");
+
+				// Load the absolute coordinates of the selected element
+				JSObject preview = (JSObject) webView.getEngine().executeScript("preview");
+				JSObject posArray = (JSObject) preview.call("getAbsPosition", choose);
+				selectedElementY = (Integer) posArray.getMember("0");
+
 			}
 
-			JSObject preview = (JSObject) webView.getEngine().executeScript("preview");
-			JSObject posArray = (JSObject) preview.call("getAbsPosition", choose);
-			Integer pos = (Integer) posArray.getMember("0");
-
-			Number chooseHeight = (Number) ((JSObject) choose.call("getBoundingClientRect")).getMember("height");
-
+			// Get window object, ready to handle offset
 			JSObject window = (JSObject) webView.getEngine().executeScript("window");
 			Integer windowHeight = (Integer) window.getMember("innerHeight");
-			double offset = windowHeight / 2;
-			if (chooseHeight.doubleValue() > offset) {
-				offset = windowHeight - chooseHeight.doubleValue();
+
+			// Calculate the position that should be offset this time
+			double diff = value.getOriginalProportion();
+
+
+			// ?????????????
+			double scrollY = selectedElementY - (double) windowHeight / 2;
+			if (isScroll) {
+				//
+				JSObject body = (JSObject) document.getMember("body");
+				Number scrollHeight = (Number) body.getMember("scrollHeight");
+				// The proportion is the proportion of the remaining undisplayed area, and the value needs to be judged according to the direction of the mouse scroll
+
+				System.out.println(diff);
+				if (diff > 0) {
+					// Scroll down
+					// (The height of the currently selected element) plus (the bottom area multiplied by the ratio)
+					scrollY = selectedElementY + selectedElementHeight.doubleValue() + ((scrollHeight.doubleValue() - selectedElementY) * diff);
+				} else {
+					// ???
+					scrollY = selectedElementY + (selectedElementY * diff);
+				}
+//				offset = -((scrollHeight.doubleValue() - selectedElementY) * diff);
+			} else if (selectedElementHeight.doubleValue() > (double) windowHeight / 2) {
+				// The currently selected element cannot be displayed in the second half of the screen
+				// ?????????????????
+				scrollY = selectedElementY + windowHeight - selectedElementHeight.doubleValue();
 			}
+
 			// Center selected element
-			window.call("scrollTo", 0, pos - offset);
+			window.call("scrollTo", 0, scrollY);
 		});
 	}
 

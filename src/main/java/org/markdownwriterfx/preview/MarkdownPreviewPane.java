@@ -247,11 +247,7 @@ public class MarkdownPreviewPane {
 		Platform.runLater(() -> {
 			scrollYrunLaterPending = false;
 			if (previewSyncProperty().get() != null) {
-				if (previewSyncProperty().get().getNotifyType() == PreviewSyncNotify.NotifyType.SCROLL) {
-					activePreview.scrollY(previewContext, previewSync.get().getOriginalProportion());
-				} else {
-					activePreview.scrollY(previewContext, previewSync.get());
-				}
+				activePreview.scrollY(previewContext, previewSync.get());
 			}
 		});
 	}
