@@ -172,15 +172,8 @@ class WebViewPreview
 
 			boolean hasSelectedElement = StringUtils.isNotBlank(value.getKey());
 
-			boolean isScroll = PreviewSyncNotify.NotifyType.SCROLL == value.getNotifyType();
 
 			if (!hasSelectedElement) {
-				if (!isScroll) {
-
-					return;
-				}
-				scrollY(context, value.getOriginalProportion());
-				// Offset element without selection
 				return;
 			}
 
@@ -193,9 +186,7 @@ class WebViewPreview
 			JSObject choose = (JSObject) document.call("getElementById", value.getKey());
 			if (choose == null) {
 				// No selected element, no need to calculate the position of the specified element
-				if (!isScroll) {
-					return;
-				}
+				return;
 			} else {
 				selectedElementHeight = (Number) ((JSObject) choose.call("getBoundingClientRect")).getMember("height");
 
@@ -216,23 +207,7 @@ class WebViewPreview
 
 			// ?????????????
 			double scrollY = selectedElementY - (double) windowHeight / 2;
-			if (isScroll) {
-				//
-				JSObject body = (JSObject) document.getMember("body");
-				Number scrollHeight = (Number) body.getMember("scrollHeight");
-				// The proportion is the proportion of the remaining undisplayed area, and the value needs to be judged according to the direction of the mouse scroll
-
-				System.out.println(diff);
-				if (diff > 0) {
-					// Scroll down
-					// (The height of the currently selected element) plus (the bottom area multiplied by the ratio)
-					scrollY = selectedElementY + selectedElementHeight.doubleValue() + ((scrollHeight.doubleValue() - selectedElementY) * diff);
-				} else {
-					// ???
-					scrollY = selectedElementY + (selectedElementY * diff);
-				}
-//				offset = -((scrollHeight.doubleValue() - selectedElementY) * diff);
-			} else if (selectedElementHeight.doubleValue() > (double) windowHeight / 2) {
+			if (selectedElementHeight.doubleValue() > (double) windowHeight / 2) {
 				// The currently selected element cannot be displayed in the second half of the screen
 				// ?????????????????
 				scrollY = selectedElementY + windowHeight - selectedElementHeight.doubleValue();

@@ -27,20 +27,13 @@
 
 package org.markdownwriterfx.editor;
 
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyCombination.*;
-import static org.fxmisc.wellbehaved.event.EventPattern.keyPressed;
-import static org.fxmisc.wellbehaved.event.InputMap.consume;
-import static org.fxmisc.wellbehaved.event.InputMap.sequence;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.BiConsumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import com.vladsch.flexmark.ast.*;
+import com.vladsch.flexmark.ext.gfm.strikethrough.Strikethrough;
+import com.vladsch.flexmark.util.ast.DelimitedNode;
+import com.vladsch.flexmark.util.ast.Node;
+import com.vladsch.flexmark.util.ast.NodeVisitor;
 import com.vladsch.flexmark.util.ast.Visitor;
+import com.vladsch.flexmark.util.sequence.BasedSequence;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -55,42 +48,33 @@ import org.markdownwriterfx.dialogs.ImageDialog;
 import org.markdownwriterfx.dialogs.LinkDialog;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.util.Utils;
-import com.vladsch.flexmark.ast.AutoLink;
-import com.vladsch.flexmark.ast.BlockQuote;
-import com.vladsch.flexmark.ast.BulletListItem;
-import com.vladsch.flexmark.ast.Code;
-import com.vladsch.flexmark.util.ast.DelimitedNode;
-import com.vladsch.flexmark.ast.Emphasis;
-import com.vladsch.flexmark.ast.FencedCodeBlock;
-import com.vladsch.flexmark.ast.Heading;
-import com.vladsch.flexmark.ast.Image;
-import com.vladsch.flexmark.ast.ImageRef;
-import com.vladsch.flexmark.ast.Link;
-import com.vladsch.flexmark.ast.LinkNode;
-import com.vladsch.flexmark.ast.LinkRef;
-import com.vladsch.flexmark.ast.ListBlock;
-import com.vladsch.flexmark.ast.ListItem;
-import com.vladsch.flexmark.ast.MailLink;
-import com.vladsch.flexmark.util.ast.Node;
-import com.vladsch.flexmark.util.ast.NodeVisitor;
-import com.vladsch.flexmark.ast.OrderedListItem;
-import com.vladsch.flexmark.ast.StrongEmphasis;
-import com.vladsch.flexmark.ext.gfm.strikethrough.Strikethrough;
-import com.vladsch.flexmark.util.sequence.BasedSequence;
+
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static javafx.scene.input.KeyCode.*;
+import static javafx.scene.input.KeyCombination.*;
+import static org.fxmisc.wellbehaved.event.EventPattern.keyPressed;
+import static org.fxmisc.wellbehaved.event.InputMap.consume;
+import static org.fxmisc.wellbehaved.event.InputMap.sequence;
 
 /**
  * Smart Markdown text edit methods.
  *
  * @author Karl Tauber
  */
-public class SmartEdit
-{
+public class SmartEdit {
 	private static final String TASK_LIST_MARKER = "(?:\\[[ xX]\\]\\s+|)";
 	private static final String BULLET_LIST_MARKER = "\\s*[*+-]\\s+" + TASK_LIST_MARKER;
 	private static final String ORDERED_LIST_MARKER = "\\s*[0-9]+\\.\\s+" + TASK_LIST_MARKER;
 	private static final String BLOCK_QUOTE_MARKER = "\\s*(?:>\\s*)+";
 	private static final Pattern AUTO_INDENT_PATTERN = Pattern.compile(
-			"(" + BULLET_LIST_MARKER + "|" + ORDERED_LIST_MARKER + "|" + BLOCK_QUOTE_MARKER + "|\\s+)(.*)");
+		"(" + BULLET_LIST_MARKER + "|" + ORDERED_LIST_MARKER + "|" + BLOCK_QUOTE_MARKER + "|\\s+)(.*)");
 
 	private final MarkdownEditorPane editor;
 	private final MarkdownTextArea textArea;
@@ -102,18 +86,18 @@ public class SmartEdit
 		this.smartFormat = new SmartFormat(editor, textArea);
 
 		Nodes.addInputMap(textArea, sequence(
-			consume(keyPressed(ENTER),							this::enterPressed),
-			consume(keyPressed(TAB),							this::tabPressed),
-			consume(keyPressed(TAB, SHIFT_DOWN),				this::shiftTabPressed),
-			consume(keyPressed(BACK_SPACE),						this::backspacePressed),
-			consume(keyPressed(D, SHORTCUT_DOWN),				this::deleteLine),
-			consume(keyPressed(UP, ALT_DOWN),					this::moveLinesUp),
-			consume(keyPressed(DOWN, ALT_DOWN),					this::moveLinesDown),
-			consume(keyPressed(UP, SHORTCUT_DOWN, ALT_DOWN),	this::duplicateLinesUp),
-			consume(keyPressed(DOWN, SHORTCUT_DOWN, ALT_DOWN),	this::duplicateLinesDown),
+			consume(keyPressed(ENTER), this::enterPressed),
+			consume(keyPressed(TAB), this::tabPressed),
+			consume(keyPressed(TAB, SHIFT_DOWN), this::shiftTabPressed),
+			consume(keyPressed(BACK_SPACE), this::backspacePressed),
+			consume(keyPressed(D, SHORTCUT_DOWN), this::deleteLine),
+			consume(keyPressed(UP, ALT_DOWN), this::moveLinesUp),
+			consume(keyPressed(DOWN, ALT_DOWN), this::moveLinesDown),
+			consume(keyPressed(UP, SHORTCUT_DOWN, ALT_DOWN), this::duplicateLinesUp),
+			consume(keyPressed(DOWN, SHORTCUT_DOWN, ALT_DOWN), this::duplicateLinesDown),
 
-			consume(keyPressed(F, SHORTCUT_DOWN, SHIFT_DOWN),	smartFormat::format),
-			consume(keyPressed(F, SHORTCUT_DOWN, SHIFT_DOWN, ALT_DOWN),	smartFormat::format)
+			consume(keyPressed(F, SHORTCUT_DOWN, SHIFT_DOWN), smartFormat::format),
+			consume(keyPressed(F, SHORTCUT_DOWN, SHIFT_DOWN, ALT_DOWN), smartFormat::format)
 		));
 
 
@@ -124,6 +108,7 @@ public class SmartEdit
 	//---- properties ---------------------------------------------------------
 
 	private boolean updateStatePropertiesRunLaterPending;
+
 	private void updateStateProperties() {
 		// avoid too many (and useless) runLater() invocations
 		if (updateStatePropertiesRunLaterPending)
@@ -136,15 +121,15 @@ public class SmartEdit
 			List<Node> nodesAtSelection = findNodesAtSelection((s, e, n) -> true, true, false);
 
 			boolean bold = false;
- 			boolean italic = false;
- 			boolean code = false;
- 			boolean link = false;
- 			boolean image = false;
- 			boolean unorderedList = false;
- 			boolean orderedList = false;
- 			boolean blockquote = false;
- 			boolean fencedCode = false;
- 			boolean header = false;
+			boolean italic = false;
+			boolean code = false;
+			boolean link = false;
+			boolean image = false;
+			boolean unorderedList = false;
+			boolean orderedList = false;
+			boolean blockquote = false;
+			boolean fencedCode = false;
+			boolean header = false;
 			for (Node node : nodesAtSelection) {
 				if (!bold && node instanceof StrongEmphasis)
 					bold = true;
@@ -181,34 +166,64 @@ public class SmartEdit
 	}
 
 	private final BooleanProperty bold = new SimpleBooleanProperty();
-	public BooleanProperty boldProperty() { return bold; }
+
+	public BooleanProperty boldProperty() {
+		return bold;
+	}
 
 	private final BooleanProperty italic = new SimpleBooleanProperty();
-	public BooleanProperty italicProperty() { return italic; }
+
+	public BooleanProperty italicProperty() {
+		return italic;
+	}
 
 	private final BooleanProperty code = new SimpleBooleanProperty();
-	public BooleanProperty codeProperty() { return code; }
+
+	public BooleanProperty codeProperty() {
+		return code;
+	}
 
 	private final BooleanProperty link = new SimpleBooleanProperty();
-	public BooleanProperty linkProperty() { return link; }
+
+	public BooleanProperty linkProperty() {
+		return link;
+	}
 
 	private final BooleanProperty image = new SimpleBooleanProperty();
-	public BooleanProperty imageProperty() { return image; }
+
+	public BooleanProperty imageProperty() {
+		return image;
+	}
 
 	private final BooleanProperty unorderedList = new SimpleBooleanProperty();
-	public BooleanProperty unorderedListProperty() { return unorderedList; }
+
+	public BooleanProperty unorderedListProperty() {
+		return unorderedList;
+	}
 
 	private final BooleanProperty orderedList = new SimpleBooleanProperty();
-	public BooleanProperty orderedListProperty() { return orderedList; }
+
+	public BooleanProperty orderedListProperty() {
+		return orderedList;
+	}
 
 	private final BooleanProperty blockquote = new SimpleBooleanProperty();
-	public BooleanProperty blockquoteProperty() { return blockquote; }
+
+	public BooleanProperty blockquoteProperty() {
+		return blockquote;
+	}
 
 	private final BooleanProperty fencedCode = new SimpleBooleanProperty();
-	public BooleanProperty fencedCodeProperty() { return fencedCode; }
+
+	public BooleanProperty fencedCodeProperty() {
+		return fencedCode;
+	}
 
 	private final BooleanProperty header = new SimpleBooleanProperty();
-	public BooleanProperty headerProperty() { return header; }
+
+	public BooleanProperty headerProperty() {
+		return header;
+	}
 
 	//---- enter  -------------------------------------------------------------
 
@@ -295,11 +310,11 @@ public class SmartEdit
 
 	/**
 	 * Returns whether an indent operation should used for the selection.
-	 *
+	 * <p>
 	 * Returns true if:
-	 *  - selection spans multiple lines
-	 *  - selection is empty and caret is in leading whitespace of a line
-	 *  - a single line is completely selected (excluding line separator)
+	 * - selection spans multiple lines
+	 * - selection is empty and caret is in leading whitespace of a line
+	 * - a single line is completely selected (excluding line separator)
 	 */
 	private boolean isIndentSelection() {
 		IndexRange selection = textArea.getSelection();
@@ -311,7 +326,7 @@ public class SmartEdit
 			int end = selection.getEnd();
 			int endLine = offsetToLine(end);
 			return endLine > startLine ||
-				   lineToStartOffset(startLine) == start && lineToEndOffset(startLine) == end;
+				lineToStartOffset(startLine) == start && lineToEndOffset(startLine) == end;
 		}
 	}
 
@@ -357,7 +372,7 @@ public class SmartEdit
 
 	/**
 	 * Experiment: indent whole list items (including sub lists)
-	 *
+	 * <p>
 	 * Disabled because the user experience is not that good
 	 * and it is questionable whether this feature makes sense at all.
 	 */
@@ -419,8 +434,8 @@ public class SmartEdit
 		isel.startLine = offsetToLine(start);
 		isel.endLine = offsetToLine(end);
 		isel.startOffsetFromEnd = (start == end || start - lineToStartOffset(isel.startLine) > 0)
-				? lineToEndOffset(isel.startLine) - start
-				: -1; // beginning of line
+			? lineToEndOffset(isel.startLine) - start
+			: -1; // beginning of line
 		isel.endOffsetFromEnd = lineToEndOffset(isel.endLine) - end;
 
 		return isel;
@@ -428,8 +443,8 @@ public class SmartEdit
 
 	private void selectAfterIndent(IndentSelection isel) {
 		int start = (isel.startOffsetFromEnd != -1)
-				? Math.max(lineToEndOffset(isel.startLine) - isel.startOffsetFromEnd, lineToStartOffset(isel.startLine))
-				: lineToStartOffset(isel.startLine);
+			? Math.max(lineToEndOffset(isel.startLine) - isel.startOffsetFromEnd, lineToStartOffset(isel.startLine))
+			: lineToStartOffset(isel.startLine);
 		int end = Math.max(lineToEndOffset(isel.endLine) - isel.endOffsetFromEnd, lineToStartOffset(isel.endLine));
 		selectRange(textArea, start, end);
 	}
@@ -621,8 +636,7 @@ public class SmartEdit
 	}
 
 	private void surroundSelectionAndReplaceMarker(String leading, String trailing, String hint,
-			DelimitedNode node, String newOpeningMarker, String newClosingMarker)
-	{
+												   DelimitedNode node, String newOpeningMarker, String newClosingMarker) {
 		IndexRange selection = textArea.getSelection();
 		int start = selection.getStart();
 		int end = selection.getEnd();
@@ -653,7 +667,7 @@ public class SmartEdit
 		String before = textArea.getText(openingMarker.getEndOffset(), start);
 		String after = textArea.getText(end, closingMarker.getStartOffset());
 		replaceText(textArea, openingMarker.getStartOffset(), closingMarker.getEndOffset(),
-				newOpeningMarker + before + leading + trimmedSelectedText + trailing + after + newClosingMarker );
+			newOpeningMarker + before + leading + trimmedSelectedText + trailing + after + newClosingMarker);
 		selectRange(textArea, selStart, selEnd);
 	}
 
@@ -687,7 +701,7 @@ public class SmartEdit
 		List<? extends Node> nodes = findNodesAtSelection((s, e, n) -> cls.isInstance(n), false, false);
 		if (nodes.size() > 0) {
 			// there is delimited text in current selection --> change them to plain text
-			if (nodes.size() == 1 && hint.equals(((DelimitedNode)nodes.get(0)).getText().toString())) {
+			if (nodes.size() == 1 && hint.equals(((DelimitedNode) nodes.get(0)).getText().toString())) {
 				// delete node including hint text
 				Node node = nodes.get(0);
 				deleteText(textArea, node.getStartOffset(), node.getEndOffset());
@@ -703,7 +717,7 @@ public class SmartEdit
 			T node = nodes.get(i);
 			if (i > 0)
 				buf.append(textArea.getText(nodes.get(i - 1).getEndOffset(), node.getStartOffset()));
-			buf.append(((DelimitedNode)node).getText());
+			buf.append(((DelimitedNode) node).getText());
 		}
 
 		int start = nodes.get(0).getStartOffset();
@@ -959,7 +973,7 @@ public class SmartEdit
 			return null;
 
 		T node = nodes.get(0);
-		BasedSequence text = (node instanceof DelimitedNode) ? ((DelimitedNode)node).getText() : node.getChars();
+		BasedSequence text = (node instanceof DelimitedNode) ? ((DelimitedNode) node).getText() : node.getChars();
 		return (start >= text.getStartOffset() && end <= text.getEndOffset()) ? node : null;
 	}
 
@@ -995,7 +1009,7 @@ public class SmartEdit
 					if (deepest) {
 						int oldNodesSize = nodes.size();
 						visitChildren(node);
-						
+
 						// add only if no other child was added
 						if (nodes.size() == oldNodesSize)
 							nodes.add((T) node);
@@ -1016,7 +1030,7 @@ public class SmartEdit
 	}
 
 	private interface FindNodePredicate {
-	    boolean test(int start, int end, Node node);
+		boolean test(int start, int end, Node node);
 	}
 
 	private boolean isInNode(int start, int end, Node node) {

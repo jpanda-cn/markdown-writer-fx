@@ -38,11 +38,11 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.geometry.Bounds;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.input.*;
+import org.fxmisc.flowless.VirtualFlow;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.Caret.CaretVisibility;
 import org.fxmisc.richtext.CaretNode;
@@ -64,10 +64,7 @@ import org.reactfx.util.Either;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyCombination.*;
@@ -127,6 +124,7 @@ public class MarkdownEditorPane {
 		textArea.setOnDragDropped(this::onDragDropped);
 		textArea.caretPositionProperty().addListener((observable, oldValue, newValue) -> {
 			flushViewY();
+			textArea.requestFollowCaret();
 		});
 
 		// create scroll pane
@@ -134,25 +132,52 @@ public class MarkdownEditorPane {
 		// create border pane
 		borderPane = new BottomSlidePane(scrollPane);
 
-		scrollPane.estimatedScrollYProperty().addListener((observable, oldValue, newValue) -> {
-			int firstPar = textArea.firstVisibleParToAllParIndex();
-			int lastPar = lastShowFirstLine;
-			int diff = firstPar - lastPar;
-			// ??????
-			textArea.moveTo(Math.min(lastSelectLine + diff, textArea.getParagraphs().size()), 0);
-		});
-
 		textArea.addEventFilter(ScrollEvent.ANY, e -> {
-			if (textArea.getEstimatedScrollY() == 0D && e.getDeltaY() > 0) {
-				textArea.moveTo(Math.max(lastSelectLine - 1, 0), 0);
+			if (e.getEventType().equals(ScrollEvent.SCROLL_FINISHED)) {
+				textArea.requestFollowCaret();
 				e.consume();
+				return;
+			}
+			if (textArea.getEstimatedScrollY() == 0D && e.getDeltaY() > 0) {
+				// upper apex
+				textArea.moveTo(Math.max(lastSelectLine - 1, 0), 0);
+				textArea.requestFollowCaret();
+				e.consume();
+				return;
 			}
 			if (e.getDeltaY() < 0 && textArea.getEstimatedScrollY() + textArea.getViewportHeight() == textArea.getTotalHeightEstimate()) {
-				textArea.moveTo(Math.max(lastSelectLine + 1, 0), 0);
+				// Tail
 				e.consume();
+				if (textArea.getParagraphs().size() == lastSelectLine + 1) {
+					return;
+				}
+				textArea.moveTo(Math.max(lastSelectLine + 1, 0), 0);
+				textArea.requestFollowCaret();
+				return;
 			}
+
+			boolean up = e.getDeltaY() > 0;
+
+			textArea.moveTo(lastSelectLine + (e.getDeltaY() > 0 ? -1 : 1), 0);
+			textArea.requestFollowCaret();
+
+			VirtualFlow<?, ?> vf = (VirtualFlow<?, ?>) textArea.lookup(".virtual-flow");
+			int hideLine = up
+				? (vf.visibleCells().size() - 1)
+				: (0);
+
+			try {
+				vf.visibleCells();
+				double height = vf.visibleCells().get(hideLine).getNode().getLayoutBounds().getHeight();
+				textArea.scrollYBy(up ? -height : height);
+			} catch (NoSuchElementException e2) {
+				e2.printStackTrace();
+			}
+
+			e.consume();
+
 		});
-		extraSelection = new SelectionImpl<>("", textArea, path -> {
+		extraSelection = new SelectionImpl<>(UUID.randomUUID().toString(), textArea, path -> {
 			path.setVisible(false);
 		});
 		textArea.addSelection(extraSelection);
@@ -723,8 +748,12 @@ public class MarkdownEditorPane {
 
 	private void flushViewY() {
 
-		// Get the element at the current cursor
+
 		IndexRange range = new IndexRange(textArea.getCaretPosition(), textArea.getCaretPosition());
+		// Get the element at the current cursor
+		if (textArea.getCaretPosition() > textArea.getLength()-1) {
+			range = new IndexRange(textArea.getLength()-1, textArea.getLength()-1);
+		}
 		Node n = loadNode(getMarkdownAST(), range);
 		boolean isDocument = n instanceof Document;
 		if (isDocument) {
@@ -745,9 +774,6 @@ public class MarkdownEditorPane {
 				indexRange = new IndexRange(n.getStartOffset(), n.getEndOffset());
 				id = String.format("_%s_%d", n.getNodeName(), n.hashCode());
 			}
-			extraSelection.selectRange(indexRange.getStart(), indexRange.getEnd());
-
-			Optional<Bounds> b = extraSelection.getSelectionBounds();
 
 			PreviewSyncNotify notify = new PreviewSyncNotify();
 			notify.setKey(id);
@@ -757,22 +783,27 @@ public class MarkdownEditorPane {
 			notify.setTotalScrollY(textArea.totalHeightEstimateProperty().getValue());
 			notify.setLineProportion(((double) textArea.getCurrentParagraph() + 1) / (double) textArea.getParagraphs().size() + 1 / (double) textArea.getParagraphs().size());
 
-			if (b.isPresent()) {
-				notify.setRangeHeight(b.get().getHeight());
-				notify.setRangeY(b.get().getMinY());
-				notify.setRangeBounds(b.get());
-			}
 
 			notify.setNotifyType(PreviewSyncNotify.NotifyType.CARE);
-			notify.setOriginalProportion(textArea.getEstimatedScrollY() / textArea.getTotalHeightEstimate());
+			Double totalHeightEstimate = 0D;
+			if (textArea.totalHeightEstimateProperty().getValue() != null) {
+				totalHeightEstimate = textArea.totalHeightEstimateProperty().getValue();
+			}
+
+			if (totalHeightEstimate != 0) {
+				notify.setOriginalProportion(textArea.getEstimatedScrollY() / totalHeightEstimate);
+			}
 			// Cursor position
 			int lastCaretPosition = textArea.getCaretPosition();
-			lastShowFirstLine = textArea.firstVisibleParToAllParIndex();
+			if (textArea.getVisibleParagraphs().size() > 0) {
+				lastShowFirstLine = textArea.firstVisibleParToAllParIndex();
+			}
 			lastSelectLine = textArea.offsetToPosition(lastCaretPosition, TwoDimensional.Bias.Forward).getMajor();
 
 			previewSync.set(notify);
 
 		} catch (Exception e) {
+			e.printStackTrace();
 			extraSelection.deselect();
 		}
 	}

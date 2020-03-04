@@ -169,7 +169,6 @@ public class TestSmartFormat
 			.filter(path -> path.toString().endsWith(".txt"))
 			.forEach(path -> {
 				try {
-					System.out.println(path);
 					String input = new String(Files.readAllBytes(path), "UTF-8");
 					String output = format(input, 80);
 					Files.write(path, output.getBytes("UTF-8"));
