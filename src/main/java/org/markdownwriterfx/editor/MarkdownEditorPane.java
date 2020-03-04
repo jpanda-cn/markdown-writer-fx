@@ -128,7 +128,13 @@ public class MarkdownEditorPane {
 		textArea.caretPositionProperty().addListener((observable, oldValue, newValue) -> {
 			flushViewY();
 		});
-		textArea.estimatedScrollYProperty().addListener((observable, oldValue, newValue) -> {
+
+		// create scroll pane
+		VirtualizedScrollPane<MarkdownTextArea> scrollPane = new VirtualizedScrollPane<>(textArea);
+		// create border pane
+		borderPane = new BottomSlidePane(scrollPane);
+
+		scrollPane.estimatedScrollYProperty().addListener((observable, oldValue, newValue) -> {
 			int firstPar = textArea.firstVisibleParToAllParIndex();
 			int lastPar = lastShowFirstLine;
 			int diff = firstPar - lastPar;
@@ -159,16 +165,10 @@ public class MarkdownEditorPane {
 			consume(keyPressed(DIGIT0, SHORTCUT_DOWN), this::resetFontSize),
 			consume(keyPressed(W, ALT_DOWN), this::showWhitespace),
 			consume(keyPressed(I, ALT_DOWN), this::showImagesEmbedded),
-			consume(keyPressed(W, CONTROL_DOWN), this::selectWords)
-//			consume(keyPressed(A, CONTROL_DOWN), event -> selectAll())
+			consume(keyPressed(W, CONTROL_DOWN), this::selectWords),
+			/* Internal priority trigger, otherwise it will be terminated*/
+			consume(keyPressed(A, CONTROL_DOWN), event -> selectAll())
 		));
-
-
-		// create scroll pane
-		VirtualizedScrollPane<MarkdownTextArea> scrollPane = new VirtualizedScrollPane<>(textArea);
-
-		// create border pane
-		borderPane = new BottomSlidePane(scrollPane);
 
 
 		overlayGraphicFactory = new ParagraphOverlayGraphicFactory(textArea);
@@ -444,6 +444,9 @@ public class MarkdownEditorPane {
 
 	private void selectWords(KeyEvent e) {
 		IndexRange diffuse = selectDiffuse(selectionProperty().getValue());
+
+//		textArea.selectRange(diffuse.getStart(), diffuse.getEnd());
+
 		selectRange(diffuse.getStart(), diffuse.getEnd());
 	}
 

@@ -933,7 +933,7 @@ public class SmartEdit
 	 */
 	static void selectRange(MarkdownTextArea textArea, int anchor, int caretPosition) {
 		textArea.selectRange(anchor, caretPosition);
-		textArea.requestFollowCaret();
+//		textArea.requestFollowCaret();
 	}
 
 	/**

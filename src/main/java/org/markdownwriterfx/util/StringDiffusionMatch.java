@@ -88,6 +88,7 @@ public class StringDiffusionMatch {
 			boolean matchEnd = bracket.containsKey(temp)
 				&& pos.containsKey(bracket.get(temp)) && (i == 0 || ((s.charAt(i - 1) != '\\') || (i == 1 || s.charAt(i - 2) == '\\')));
 
+			matchEnd = matchEnd && (!needSkip || i != s.length() - 1);
 			// 匹配到结束符号
 			if (matchEnd) {
 				int subStart = pos.get(bracket.get(temp));
