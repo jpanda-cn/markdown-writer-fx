@@ -10,12 +10,20 @@ import com.vladsch.flexmark.html.renderer.NodeRendererFactory;
 import com.vladsch.flexmark.html.renderer.NodeRenderingHandler;
 import com.vladsch.flexmark.util.data.DataHolder;
 import com.vladsch.flexmark.util.data.DataKey;
+import net.sourceforge.plantuml.FileFormat;
+import net.sourceforge.plantuml.FileFormatOption;
+import net.sourceforge.plantuml.SourceStringReader;
+import net.sourceforge.plantuml.core.DiagramDescription;
 import org.apache.commons.lang3.StringUtils;
+import org.java_websocket.util.Base64;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.ByteArrayOutputStream;
 import java.util.HashSet;
 import java.util.Set;
+
+import static java.lang.Character.LINE_SEPARATOR;
 
 /**
  * ?? Plant UML
@@ -75,16 +83,21 @@ public class PlantUmlNodeRenderer implements NodeRenderer {
 	}
 
 	public void renderLocal(FencedCodeBlock node, NodeRendererContext context, HtmlWriter html) {
-		html
-//			.attr("src", handlerText(node.getContentChars().normalizeEOL()))
+//		html
+////			.attr("src", handlerText(node.getContentChars().normalizeEOL()))
+////			.withAttr()
+//			.attr("id", String.format("_%s_%d", node.getNodeName(), node.hashCode()))
 //			.withAttr()
-			.attr("id", String.format("_%s_%d",node.getNodeName(),node.hashCode()))
-			.withAttr()
+//			.tag("p")
+//			.raw(toSvg(node.getContentChars().normalizeEOL()))
+//			.closeTag("p")
+//		;
+		html
 			.tag("p")
-			.raw(toSvg(node.getContentChars().normalizeEOL()))
-			.closeTag("p")
-		;
-
+			.attr("src", toPng(node.getContentChars().normalizeEOL()))
+			.withAttr().tag("img").line()
+			.closeTag("img").line()
+			.closeTag("p");
 	}
 
 	public String toSvg(String uml) {
@@ -92,11 +105,39 @@ public class PlantUmlNodeRenderer implements NodeRenderer {
 			return "";
 		}
 		try {
+//			System.setProperty("plantuml.include.path", Paths.get(System.getProperty("user.dir"), "plant-uml").toFile().getAbsolutePath());
+			System.setProperty("GRAPHVIZ_DOT", "D:\\usr\\local\\graphviz\\bin\\dot.exe");
 			String svg = SvgGeneratorService.getInstance().generateSvgFromPlantUml(uml, plantUmlLocalRenderFormatSvg);
 			return svg.replaceAll("\r\n", "");
+
+
 //			return SvgGeneratorService.getInstance().generateSvgFromPlantUml(uml, plantUmlLocalRenderFormatSvg);
 		} catch (PlantumlRuntimeException e) {
 			return "";
+		}
+	}
+
+
+	public static String toPng(String plantUml) {
+		System.setProperty("GRAPHVIZ_DOT", "D:\\usr\\local\\graphviz\\bin\\dot.exe");
+		try (final ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+			if (!plantUml.trim().startsWith("@startuml")) {
+				plantUml = "@startuml" + LINE_SEPARATOR + plantUml;
+			}
+			if (!plantUml.trim().endsWith("@enduml")) {
+				plantUml = plantUml + LINE_SEPARATOR + "@enduml";
+			}
+
+			SourceStringReader reader = new SourceStringReader(plantUml);
+
+
+			FileFormatOption fileFormatOption = new FileFormatOption(FileFormat.PNG);
+			DiagramDescription diagramDescription = reader.outputImage(os, fileFormatOption);
+			return String.format("data:image/png;base64,%s", Base64.encodeBytes(os.toByteArray()));
+			// The XML is stored into svg
+//			return new String(os.toByteArray(), StandardCharsets.UTF_8);
+		} catch (Exception e) {
+			throw new PlantumlRuntimeException("PlantUML: " + plantUml, e);
 		}
 	}
 

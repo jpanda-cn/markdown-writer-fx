@@ -42,10 +42,17 @@ import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.preview.MarkdownPreviewPane.PreviewContext;
 import org.markdownwriterfx.preview.MarkdownPreviewPane.Renderer;
 import org.markdownwriterfx.util.Utils;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.events.Event;
+import org.w3c.dom.events.EventListener;
+import org.w3c.dom.events.EventTarget;
 
+import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -73,6 +80,7 @@ class WebViewPreview
 	}
 
 	private void createNodes() {
+
 		webView = new WebView();
 		webView.setFocusTraversable(false);
 
@@ -129,6 +137,44 @@ class WebViewPreview
 		String scrollScript = (lastScrollX > 0 || lastScrollY > 0)
 			? ("  onload='window.scrollTo(" + lastScrollX + ", " + lastScrollY + ");'")
 			: "";
+
+
+		webView.getEngine().getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
+
+			if (newValue == State.SUCCEEDED) {
+				Document document = webView.getEngine().getDocument();
+				NodeList aList = document.getElementsByTagName("a");
+				for (int i = 0; i < aList.getLength(); i++) {
+					org.w3c.dom.Node n = aList.item(i);
+					org.w3c.dom.Node href = n.getAttributes().getNamedItem("href");
+					if (href != null) {
+						String target = href.getTextContent();
+						if (StringUtils.isNotBlank(target) && target.trim().startsWith("#")) {
+							((EventTarget) n).addEventListener("click", new EventListener() {
+								@Override
+								public void handleEvent(Event evt) {
+									JSObject window = (JSObject) webView.getEngine().executeScript("window");
+									window.call("scrollToElement", target.trim().replaceFirst("#", ""));
+									evt.preventDefault();
+								}
+							}, false);
+						}
+					}
+					((EventTarget) n).addEventListener("click", new EventListener() {
+						@Override
+						public void handleEvent(Event evt) {
+							try {
+								Desktop.getDesktop().browse(new URI(href.getTextContent()));
+							} catch (Exception e) {
+
+							} finally {
+								evt.preventDefault();
+							}
+						}
+					}, false);
+				}
+			}
+		});
 		webView.getEngine().loadContent(
 			"<!DOCTYPE html>\n"
 				+ "<html>\n"
@@ -143,6 +189,7 @@ class WebViewPreview
 				+ "}\n"
 				+ "</style>\n"
 				+ "<script src=\"" + getClass().getResource("preview.js") + "\"></script>\n"
+				+ "<script> function scrollToElement(elementId) {document.getElementById(elementId).scrollIntoView();} </script>"
 				+ prismSyntaxHighlighting(context.getMarkdownAST())
 				+ base
 				+ "</head>\n"

@@ -4,18 +4,18 @@ import org.gradle.plugins.ide.eclipse.model.AccessRule
 version = "0.12"
 
 // check required Java version
-if( JavaVersion.current() < JavaVersion.VERSION_1_8 || JavaVersion.current() > JavaVersion.VERSION_11 )
-	throw RuntimeException( "Java 8, 9, 10 or 11 required (running ${System.getProperty( "java.version" )})" )
+if (JavaVersion.current() < JavaVersion.VERSION_1_8 || JavaVersion.current() > JavaVersion.VERSION_11)
+	throw RuntimeException("Java 8, 9, 10 or 11 required (running ${System.getProperty("java.version")})")
 
 // use Java version that currently runs Gradle for source/target compatibility
 val javaCompatibility = JavaVersion.current()
 
 // log version, Gradle and Java versions
 println()
-println( "-------------------------------------------------------------------------------" )
-println( "Markdown Writer FX Version: ${version}" )
-println( "Gradle ${gradle.gradleVersion} at ${gradle.gradleHomeDir}" )
-println( "Java ${System.getProperty( "java.version" )}" )
+println("-------------------------------------------------------------------------------")
+println("Markdown Writer FX Version: ${version}")
+println("Gradle ${gradle.gradleVersion} at ${gradle.gradleHomeDir}")
+println("Java ${System.getProperty("java.version")}")
 println()
 
 plugins {
@@ -31,72 +31,74 @@ repositories {
 
 dependencies {
 	// build RichTextFX from branch 'markdown-writer-fx' on https://github.com/JFormDesigner/RichTextFX
-	compile( "org.fxmisc.richtext:richtextfx" ) {
+	compile("org.fxmisc.richtext:richtextfx") {
 		version {
 			branch = "markdown-writer-fx"
 		}
 	}
 
-	compile( "com.miglayout:miglayout-javafx:5.2" )
+	compile("com.miglayout:miglayout-javafx:5.2")
 
-	val fontawesomefxVersion = if( javaCompatibility >= JavaVersion.VERSION_1_9 ) "4.7.0-9.1.2" else "4.7.0-5"
-	val controlsfxVersion = if( javaCompatibility >= JavaVersion.VERSION_1_9 ) "9.0.0" else "8.40.14"
-	compile( "de.jensd:fontawesomefx-fontawesome:${fontawesomefxVersion}" )
-	if( javaCompatibility == JavaVersion.VERSION_1_8 ) {
+	val fontawesomefxVersion = if (javaCompatibility >= JavaVersion.VERSION_1_9) "4.7.0-9.1.2" else "4.7.0-5"
+	val controlsfxVersion = if (javaCompatibility >= JavaVersion.VERSION_1_9) "9.0.0" else "8.40.14"
+	compile("de.jensd:fontawesomefx-fontawesome:${fontawesomefxVersion}")
+	if (javaCompatibility == JavaVersion.VERSION_1_8) {
 		// required since Gradle 5.0 because fontawesomefx-fontawesome-4.7.0-5.pom uses
 		// scope "runtime" for its "fontawesomefx-commons" dependency
 		// (fontawesomefx-fontawesome-4.7.0-9.pom uses scope "compile")
 		// https://docs.gradle.org/5.0/userguide/upgrading_version_4.html#rel5.0:pom_compile_runtime_separation
-		compile( "de.jensd:fontawesomefx-commons:8.15" )
+		compile("de.jensd:fontawesomefx-commons:8.15")
 	}
-	compile( "org.controlsfx:controlsfx:${controlsfxVersion}" )
-	compile( "org.fxmisc.cssfx:cssfx:1.0.0" )
-	compile( "org.apache.commons:commons-lang3:3.8.1" )
-	compile( "com.esotericsoftware.yamlbeans:yamlbeans:1.13" )
+	compile("org.controlsfx:controlsfx:${controlsfxVersion}")
+	compile("org.fxmisc.cssfx:cssfx:1.0.0")
+	compile("org.apache.commons:commons-lang3:3.8.1")
+	compile("com.esotericsoftware.yamlbeans:yamlbeans:1.13")
 
 	val flexmarkVersion = "0.60.2"
-	compile( "com.vladsch.flexmark:flexmark:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-abbreviation:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-anchorlink:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-aside:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-autolink:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-definition:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-footnotes:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-gfm-strikethrough:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-gfm-tasklist:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-tables:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-toc:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-wikilink:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-yaml-front-matter:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-emoji:${flexmarkVersion}" )
-	compile( "com.vladsch.flexmark:flexmark-ext-gitlab:${flexmarkVersion}" )
+	compile("com.vladsch.flexmark:flexmark:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-abbreviation:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-anchorlink:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-aside:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-autolink:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-definition:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-footnotes:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-gfm-strikethrough:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-gfm-tasklist:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-tables:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-toc:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-wikilink:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-yaml-front-matter:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-emoji:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-gitlab:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-media-tags:${flexmarkVersion}")
+	compile("com.vladsch.flexmark:flexmark-ext-enumerated-reference:${flexmarkVersion}")
 
 	val commonmarkVersion = "0.12.1"
-	compile( "com.atlassian.commonmark:commonmark:${commonmarkVersion}" )
-	compile( "com.atlassian.commonmark:commonmark-ext-autolink:${commonmarkVersion}" )
-	compile( "com.atlassian.commonmark:commonmark-ext-gfm-strikethrough:${commonmarkVersion}" )
-	compile( "com.atlassian.commonmark:commonmark-ext-gfm-tables:${commonmarkVersion}" )
-	compile( "com.atlassian.commonmark:commonmark-ext-heading-anchor:${commonmarkVersion}" )
-	compile( "com.atlassian.commonmark:commonmark-ext-ins:${commonmarkVersion}" )
-	compile( "com.atlassian.commonmark:commonmark-ext-yaml-front-matter:${commonmarkVersion}" )
+	compile("com.atlassian.commonmark:commonmark:${commonmarkVersion}")
+	compile("com.atlassian.commonmark:commonmark-ext-autolink:${commonmarkVersion}")
+	compile("com.atlassian.commonmark:commonmark-ext-gfm-strikethrough:${commonmarkVersion}")
+	compile("com.atlassian.commonmark:commonmark-ext-gfm-tables:${commonmarkVersion}")
+	compile("com.atlassian.commonmark:commonmark-ext-heading-anchor:${commonmarkVersion}")
+	compile("com.atlassian.commonmark:commonmark-ext-ins:${commonmarkVersion}")
+	compile("com.atlassian.commonmark:commonmark-ext-yaml-front-matter:${commonmarkVersion}")
 
-	val javafxWebviewDebuggerVersion="0.7.6"
-	compile( "com.vladsch.javafx-webview-debugger:javafx-webview-debugger:${javafxWebviewDebuggerVersion}" )
-	val plantumlCoreVersion="1.0.13"
-	compile( "com.credibledoc:plantuml-core:${plantumlCoreVersion}" )
+	val javafxWebviewDebuggerVersion = "0.7.6"
+	compile("com.vladsch.javafx-webview-debugger:javafx-webview-debugger:${javafxWebviewDebuggerVersion}")
+	val plantumlCoreVersion = "1.0.13"
+	compile("com.credibledoc:plantuml-core:${plantumlCoreVersion}")
 
-	if( javaCompatibility >= JavaVersion.VERSION_11 ) {
+	if (javaCompatibility >= JavaVersion.VERSION_11) {
 		val javafxVersion = "11.0.2"
-		val osName = System.getProperty( "os.name" ).toLowerCase()
-		val platform = if( osName.startsWith( "windows" ) ) "win" else if( osName.startsWith( "mac" ) ) "mac" else "linux"
+		val osName = System.getProperty("os.name").toLowerCase()
+		val platform = if (osName.startsWith("windows")) "win" else if (osName.startsWith("mac")) "mac" else "linux"
 
-		compile( "org.openjfx:javafx-base:${javafxVersion}:${platform}" )
-		compile( "org.openjfx:javafx-controls:${javafxVersion}:${platform}" )
-		compile( "org.openjfx:javafx-graphics:${javafxVersion}:${platform}" )
-		compile( "org.openjfx:javafx-web:${javafxVersion}:${platform}" )
+		compile("org.openjfx:javafx-base:${javafxVersion}:${platform}")
+		compile("org.openjfx:javafx-controls:${javafxVersion}:${platform}")
+		compile("org.openjfx:javafx-graphics:${javafxVersion}:${platform}")
+		compile("org.openjfx:javafx-web:${javafxVersion}:${platform}")
 	}
 
-	testCompile( "junit:junit:4.12" )
+	testCompile("junit:junit:4.12")
 }
 
 java {
@@ -110,18 +112,18 @@ application {
 
 val jar: Jar by tasks
 jar.manifest {
-	attributes( mapOf(
+	attributes(mapOf(
 		"Main-Class" to "org.markdownwriterfx.MarkdownWriterFXApp",
-		"Class-Path" to configurations.compile.get().map { it.getName() }.joinToString( " " ),
-		"Implementation-Version" to version ) )
+		"Class-Path" to configurations.compile.get().map { it.getName() }.joinToString(" "),
+		"Implementation-Version" to version))
 }
 
 distributions {
-	getByName( "main" ) {
+	getByName("main") {
 		contents {
-			from( "LICENSE", "README.md", "CHANGES.md" )
-			into( "images" ) {
-				from( "images" )
+			from("LICENSE", "README.md", "CHANGES.md")
+			into("images") {
+				from("images")
 			}
 		}
 	}
@@ -133,8 +135,8 @@ distributions {
 eclipse {
 	classpath {
 		file {
-			whenMerged.add( object: Action<org.gradle.plugins.ide.eclipse.model.Classpath> {
-				override fun execute( classpath: org.gradle.plugins.ide.eclipse.model.Classpath ) {
+			whenMerged.add(object : Action<org.gradle.plugins.ide.eclipse.model.Classpath> {
+				override fun execute(classpath: org.gradle.plugins.ide.eclipse.model.Classpath) {
 					val jre = classpath.entries.find {
 						it is AbstractClasspathEntry &&
 							it.path.contains("org.eclipse.jdt.launching.JRE_CONTAINER")
@@ -149,11 +151,11 @@ eclipse {
 					if (jre.path.endsWith("/"))
 						jre.path = jre.path.substring(0, jre.path.length - 1)
 				}
-			} )
+			})
 		}
 	}
 }
-task("toPom"){
+task("toPom") {
 	doLast {
 		project.the<MavenPluginConvention>().pom {
 			project {
