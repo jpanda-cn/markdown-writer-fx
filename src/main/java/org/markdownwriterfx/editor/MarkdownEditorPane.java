@@ -55,6 +55,7 @@ import org.fxmisc.wellbehaved.event.Nodes;
 import org.markdownwriterfx.controls.BottomSlidePane;
 import org.markdownwriterfx.editor.FindReplacePane.HitsChangeListener;
 import org.markdownwriterfx.editor.MarkdownSyntaxHighlighter.ExtraStyledRanges;
+import org.markdownwriterfx.extensions.IDGenerator;
 import org.markdownwriterfx.options.MarkdownExtensions;
 import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.preview.MarkdownPreviewPane;
@@ -157,8 +158,8 @@ public class MarkdownEditorPane {
 			}
 
 			boolean up = e.getDeltaY() > 0;
-
-			textArea.moveTo(lastSelectLine + (e.getDeltaY() > 0 ? -1 : 1), 0);
+			int to = lastSelectLine + (e.getDeltaY() > 0 ? -1 : 1);
+			textArea.moveTo(Math.max(to, 0), 0);
 			textArea.requestFollowCaret();
 
 			VirtualFlow<?, ?> vf = (VirtualFlow<?, ?>) textArea.lookup(".virtual-flow");
@@ -751,8 +752,8 @@ public class MarkdownEditorPane {
 
 		IndexRange range = new IndexRange(textArea.getCaretPosition(), textArea.getCaretPosition());
 		// Get the element at the current cursor
-		if (textArea.getCaretPosition() > textArea.getLength()-1) {
-			range = new IndexRange(textArea.getLength()-1, textArea.getLength()-1);
+		if (textArea.getCaretPosition() > textArea.getLength() - 1) {
+			range = new IndexRange(textArea.getLength() - 1, textArea.getLength() - 1);
 		}
 		Node n = loadNode(getMarkdownAST(), range);
 		boolean isDocument = n instanceof Document;
@@ -772,7 +773,10 @@ public class MarkdownEditorPane {
 				id = null;
 			} else {
 				indexRange = new IndexRange(n.getStartOffset(), n.getEndOffset());
-				id = String.format("_%s_%d", n.getNodeName(), n.hashCode());
+				id = IDGenerator.getInstance().generatorId(n);
+				if (n instanceof Heading) {
+					id = ((Heading) n).getAnchorRefId();
+				}
 			}
 
 			PreviewSyncNotify notify = new PreviewSyncNotify();
@@ -785,14 +789,18 @@ public class MarkdownEditorPane {
 
 
 			notify.setNotifyType(PreviewSyncNotify.NotifyType.CARE);
-			Double totalHeightEstimate = 0D;
-			if (textArea.totalHeightEstimateProperty().getValue() != null) {
-				totalHeightEstimate = textArea.totalHeightEstimateProperty().getValue();
+
+			// Calculate the proportion of the current position in the entire paragraph
+			if (n != null) {
+				int current = textArea.offsetToPosition(textArea.getCaretPosition(), TwoDimensional.Bias.Forward).getMajor();
+				int startLine = textArea.offsetToPosition(n.getStartOffset(), TwoDimensional.Bias.Forward).getMajor();
+				int endLine = textArea.offsetToPosition(n.getEndOffset(), TwoDimensional.Bias.Forward).getMajor();
+				int countLine = endLine - startLine + 1;
+				notify.setOriginalProportion((current - startLine) / (double) countLine);
+			} else {
+				notify.setOriginalProportion(1);
 			}
 
-			if (totalHeightEstimate != 0) {
-				notify.setOriginalProportion(textArea.getEstimatedScrollY() / totalHeightEstimate);
-			}
 			// Cursor position
 			int lastCaretPosition = textArea.getCaretPosition();
 			if (textArea.getVisibleParagraphs().size() > 0) {

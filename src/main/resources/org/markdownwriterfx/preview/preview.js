@@ -24,7 +24,30 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+/*copy from https://www.zhangxinxu.com/wordpress/2018/10/scroll-behavior-scrollintoview-%E5%B9%B3%E6%BB%91%E6%BB%9A%E5%8A%A8/*/
+var scrollSmoothTo = function (position) {
+	if (!window.requestAnimationFrame) {
+		window.requestAnimationFrame = function (callback, element) {
+			return setTimeout(callback, 17);
+		};
+	}
+	// ??????
+	var scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+	// ??step??
+	var step = function () {
+		// ????????
+		var distance = position - scrollTop;
+		// ??????
+		scrollTop = scrollTop + distance / 5;
+		if (Math.abs(distance) < 1) {
+			window.scrollTo(0, position);
+		} else {
+			window.scrollTo(0, scrollTop);
+			requestAnimationFrame(step);
+		}
+	};
+	step();
+};
 var preview = {
 
 	scrollTo: function (value) {
@@ -84,7 +107,7 @@ var preview = {
 	},
 	getAbsPosition: function (el) {
 		if (el === null || el === undefined) {
-			return [0,0];
+			return [0, 0];
 		}
 		var el2 = el;
 		var curtop = 0;

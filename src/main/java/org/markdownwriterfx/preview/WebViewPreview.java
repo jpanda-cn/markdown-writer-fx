@@ -189,7 +189,11 @@ class WebViewPreview
 				+ "}\n"
 				+ "</style>\n"
 				+ "<script src=\"" + getClass().getResource("preview.js") + "\"></script>\n"
-				+ "<script> function scrollToElement(elementId) {document.getElementById(elementId).scrollIntoView();} </script>"
+				+ "<script> function scrollToElement(elementId) {document.getElementById(elementId).scrollIntoView({ \n" +
+				"                block: 'start', \n" +
+				"                behavior: 'smooth', \n" +
+				"                inline: 'start'\n" +
+				"            });} </script>"
 				+ prismSyntaxHighlighting(context.getMarkdownAST())
 				+ base
 				+ "</head>\n"
@@ -259,9 +263,10 @@ class WebViewPreview
 				// ?????????????????
 				scrollY = selectedElementY + windowHeight - selectedElementHeight.doubleValue();
 			}
-
+			scrollY += selectedElementHeight.doubleValue() * value.getOriginalProportion();
 			// Center selected element
-			window.call("scrollTo", 0, scrollY);
+//			window.call("scrollTo", 0, scrollY);
+			window.call("scrollSmoothTo", scrollY);
 		});
 	}
 
