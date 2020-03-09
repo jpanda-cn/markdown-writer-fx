@@ -175,6 +175,7 @@ class WebViewPreview
 				}
 			}
 		});
+
 		webView.getEngine().loadContent(
 			"<!DOCTYPE html>\n"
 				+ "<html>\n"

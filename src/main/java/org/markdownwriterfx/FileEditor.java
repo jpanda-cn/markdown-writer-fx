@@ -27,30 +27,15 @@
 
 package org.markdownwriterfx;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
+import javafx.scene.control.*;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonBar.ButtonData;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.Tab;
-import javafx.scene.control.Tooltip;
 import javafx.scene.text.Text;
 import org.fxmisc.undo.UndoManager;
 import org.markdownwriterfx.editor.MarkdownEditorPane;
@@ -58,13 +43,17 @@ import org.markdownwriterfx.options.Options;
 import org.markdownwriterfx.preview.MarkdownPreviewPane;
 import org.markdownwriterfx.preview.MarkdownPreviewPane.Type;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 /**
  * Editor for a single file.
  *
  * @author Karl Tauber
  */
-class FileEditor
-{
+class FileEditor {
 	private static final long MAX_FILE_SIZE = 500_000;
 	private static final long MAX_HEX_FILE_SIZE = 64 * 1024;
 
@@ -74,6 +63,16 @@ class FileEditor
 	private SplitPane splitPane;
 	private MarkdownEditorPane markdownEditorPane;
 	private MarkdownPreviewPane markdownPreviewPane;
+
+	public EditorViewerType getEditorViewerType() {
+		if (fileEditorTabPane.editorViewerType.get()) {
+			return EditorViewerType.ALL;
+		}
+		return EditorViewerType.SINGLE;
+
+	}
+
+
 	private long lastModified;
 
 	@SuppressWarnings("unchecked")
@@ -92,15 +91,16 @@ class FileEditor
 		@SuppressWarnings("rawtypes")
 		ChangeListener previewTypeListener = (observable, oldValue, newValue) -> updatePreviewType();
 		ChangeListener<Boolean> stageFocusedListener = (observable, oldValue, newValue) -> {
-			if (newValue)
+			if (newValue) {
 				reload();
+			}
 		};
-
 		tab.setOnSelectionChanged(e -> {
-			if(tab.isSelected()) {
+			if (tab.isSelected()) {
 				Platform.runLater(() -> activated());
 
 				Options.markdownRendererProperty().addListener(previewTypeListener);
+				fileEditorTabPane.editorViewerType.addListener(previewTypeListener);
 				fileEditorTabPane.previewVisible.addListener(previewTypeListener);
 				fileEditorTabPane.htmlSourceVisible.addListener(previewTypeListener);
 				fileEditorTabPane.markdownAstVisible.addListener(previewTypeListener);
@@ -109,6 +109,7 @@ class FileEditor
 				mainWindow.stageFocusedProperty.addListener(stageFocusedListener);
 			} else {
 				Options.markdownRendererProperty().removeListener(previewTypeListener);
+				fileEditorTabPane.editorViewerType.removeListener(previewTypeListener);
 				fileEditorTabPane.previewVisible.removeListener(previewTypeListener);
 				fileEditorTabPane.htmlSourceVisible.removeListener(previewTypeListener);
 				fileEditorTabPane.markdownAstVisible.removeListener(previewTypeListener);
@@ -135,31 +136,61 @@ class FileEditor
 
 	// 'editor' property
 	private final ObjectProperty<MarkdownEditorPane> editor = new SimpleObjectProperty<>();
-	ReadOnlyObjectProperty<MarkdownEditorPane> editorProperty() { return editor; }
+
+	ReadOnlyObjectProperty<MarkdownEditorPane> editorProperty() {
+		return editor;
+	}
 
 	// 'path' property
 	private final ObjectProperty<Path> path = new SimpleObjectProperty<>();
-	Path getPath() { return path.get(); }
-	void setPath(Path path) { this.path.set(path); }
-	ObjectProperty<Path> pathProperty() { return path; }
+
+	Path getPath() {
+		return path.get();
+	}
+
+	void setPath(Path path) {
+		this.path.set(path);
+	}
+
+	ObjectProperty<Path> pathProperty() {
+		return path;
+	}
 
 	// 'readOnly' property
 	private final ReadOnlyBooleanWrapper readOnly = new ReadOnlyBooleanWrapper();
-	boolean isReadOnly() { return readOnly.get(); }
-	ReadOnlyBooleanProperty readOnlyProperty() { return readOnly.getReadOnlyProperty(); }
+
+	boolean isReadOnly() {
+		return readOnly.get();
+	}
+
+	ReadOnlyBooleanProperty readOnlyProperty() {
+		return readOnly.getReadOnlyProperty();
+	}
 
 	// 'modified' property
 	private final ReadOnlyBooleanWrapper modified = new ReadOnlyBooleanWrapper();
-	boolean isModified() { return modified.get(); }
-	ReadOnlyBooleanProperty modifiedProperty() { return modified.getReadOnlyProperty(); }
+
+	boolean isModified() {
+		return modified.get();
+	}
+
+	ReadOnlyBooleanProperty modifiedProperty() {
+		return modified.getReadOnlyProperty();
+	}
 
 	// 'canUndo' property
 	private final BooleanProperty canUndo = new SimpleBooleanProperty();
-	BooleanProperty canUndoProperty() { return canUndo; }
+
+	BooleanProperty canUndoProperty() {
+		return canUndo;
+	}
 
 	// 'canRedo' property
 	private final BooleanProperty canRedo = new SimpleBooleanProperty();
-	BooleanProperty canRedoProperty() { return canRedo; }
+
+	BooleanProperty canRedoProperty() {
+		return canRedo;
+	}
 
 	private void updateTab() {
 		Path path = this.path.get();
@@ -169,19 +200,26 @@ class FileEditor
 	}
 
 	private boolean updatePreviewTypePending;
+
 	private void updatePreviewType() {
-		if (markdownPreviewPane == null)
+		if (markdownPreviewPane == null) {
 			return;
+		}
 
 		// avoid too many (and useless) runLater() invocations
-		if (updatePreviewTypePending)
+		if (updatePreviewTypePending) {
 			return;
+		}
 		updatePreviewTypePending = true;
 
 		Platform.runLater(() -> {
 			updatePreviewTypePending = false;
 
+			// 获取当前选中的预览窗口类型
+
 			MarkdownPreviewPane.Type previewType = getPreviewType();
+
+			EditorViewerType editorViewerType = getEditorViewerType();
 
 			markdownPreviewPane.setRendererType(Options.getMarkdownRenderer());
 			markdownPreviewPane.setType(previewType);
@@ -189,11 +227,35 @@ class FileEditor
 			// add/remove previewPane from splitPane
 			ObservableList<Node> splitItems = splitPane.getItems();
 			Node previewPane = markdownPreviewPane.getNode();
-			if (previewType != Type.None) {
-				if (!splitItems.contains(previewPane))
-					splitItems.add(previewPane);
-			} else
+			Node editNode = markdownEditorPane.getNode();
+
+			boolean isSingle = editorViewerType == EditorViewerType.SINGLE;
+
+			if (previewType == Type.None) {
+				// 移除预览窗口
 				splitItems.remove(previewPane);
+				// 无预览视图
+				if (isSingle) {
+					// 单窗口视图，无预览场景，默认展示编辑框
+					if (!splitItems.contains(editNode)) {
+						splitItems.add(0,editNode);
+					}
+				}
+			} else {
+				if (isSingle) {
+					// 单窗口视图，无预览场景，默认展示编辑框
+					splitItems.remove(editNode);
+				} else {
+					if (!splitItems.contains(editNode)) {
+						splitItems.add(0,editNode);
+					}
+				}
+
+				// 有预览窗口
+				if (!splitItems.contains(previewPane)) {
+					splitItems.add(previewPane);
+				}
+			}
 		});
 	}
 
@@ -206,12 +268,12 @@ class FileEditor
 		else if (fileEditorTabPane.markdownAstVisible.get())
 			previewType = MarkdownPreviewPane.Type.Ast;
 		else if (fileEditorTabPane.externalVisible.get() && MarkdownPreviewPane.hasExternalPreview())
-		    previewType = MarkdownPreviewPane.Type.External;
+			previewType = MarkdownPreviewPane.Type.External;
 		return previewType;
 	}
 
 	private void activated() {
-		if( tab.getTabPane() == null || !tab.isSelected())
+		if (tab.getTabPane() == null || !tab.isSelected())
 			return; // tab is already closed or no longer active
 
 		if (tab.getContent() != null) {
@@ -225,13 +287,6 @@ class FileEditor
 
 		markdownPreviewPane = new MarkdownPreviewPane();
 		markdownEditorPane = new MarkdownEditorPane();
-		editor.addListener(new ChangeListener<MarkdownEditorPane>() {
-			@Override
-			public void changed(ObservableValue<? extends MarkdownEditorPane> observable, MarkdownEditorPane oldValue, MarkdownEditorPane newValue) {
-				newValue.setMarkdownPreviewPane(markdownPreviewPane);
-			}
-		});
-		markdownEditorPane.setMarkdownPreviewPane(markdownPreviewPane);
 		markdownEditorPane.pathProperty().bind(path);
 
 		load();
@@ -254,11 +309,15 @@ class FileEditor
 		modified.bind(Bindings.not(undoManager.atMarkedPositionProperty()));
 		canUndo.bind(undoManager.undoAvailableProperty());
 		canRedo.bind(undoManager.redoAvailableProperty());
-
-		splitPane = new SplitPane(markdownEditorPane.getNode());
+		javafx.scene.Node editPane = markdownEditorPane.getNode();
+		splitPane = new SplitPane(editPane);
 		if (getPreviewType() != MarkdownPreviewPane.Type.None)
 			splitPane.getItems().add(markdownPreviewPane.getNode());
+
+
 		tab.setContent(splitPane);
+
+//		splitPane.getItems().remove(editPane);
 
 		updatePreviewType();
 		markdownEditorPane.requestFocus();
@@ -399,7 +458,7 @@ class FileEditor
 			return;
 		}
 
-		if( isModified() ) {
+		if (isModified()) {
 			Alert alert = mainWindow.createAlert(AlertType.WARNING,
 				Messages.get("FileEditor.reloadAlert.title"),
 				Messages.get("FileEditor.reloadAlert.message", path));

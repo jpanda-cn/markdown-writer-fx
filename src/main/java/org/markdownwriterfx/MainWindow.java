@@ -90,7 +90,7 @@ class MainWindow {
 		// clear select text
 		fileEditorTabPane.activeFileEditorProperty().addListener((observable, oldValue, newValue) -> Options.setSelectTextShowProperty(""));
 
-		
+
 		fileEditorManager = new FileEditorManager(fileEditorTabPane);
 		projectPane = new ProjectPane(fileEditorManager);
 
@@ -184,7 +184,7 @@ class MainWindow {
 		Text textSelectLabel = new Text();
 		textSelectLabel.textProperty().bind(Options.selectTextShowProperty());
 		HBox.setMargin(textSelectLabel, new Insets(0, 10, 0, 10));
-		
+
 		// load encoding
 		Text encoding = new Text();
 		encoding.textProperty().bind(Options.encodingProperty());
@@ -226,6 +226,7 @@ class MainWindow {
 		Action editCutAction = new Action(Messages.get("MainWindow.editCutAction"), "Shortcut+X", CUT,
 			e -> getActiveEditor().cut(),
 			activeFileEditorIsNull);
+		
 		Action editCopyAction = new Action(Messages.get("MainWindow.editCopyAction"), "Shortcut+C", COPY,
 			e -> getActiveEditor().copy(),
 			activeFileEditorIsNull);
@@ -256,8 +257,15 @@ class MainWindow {
 			activeFileEditorIsNull);
 
 		// View actions
-		Action viewPreviewAction = new Action(Messages.get("MainWindow.viewPreviewAction"), null, EYE,
+
+		Action splitViewPreviewAction = new Action(Messages.get("MainWindow.viewPreviewAction"), "Shortcut+Shift+P", COLUMNS,
+			null, null, fileEditorTabPane.editorViewerType);
+		
+		Action viewPreviewAction = new Action(Messages.get("MainWindow.viewPreviewAction"), "Shortcut+P", EYE,
 			null, null, fileEditorTabPane.previewVisible);
+
+		
+
 		Action viewHtmlSourceAction = new Action(Messages.get("MainWindow.viewHtmlSourceAction"), null, HTML5,
 			null, null, fileEditorTabPane.htmlSourceVisible);
 		Action viewMarkdownAstAction = new Action(Messages.get("MainWindow.viewMarkdownAstAction"), null, SITEMAP,
@@ -372,6 +380,8 @@ class MainWindow {
 			editFormatSelectionAction);
 
 		Menu viewMenu = ActionUtils.createMenu(Messages.get("MainWindow.viewMenu"),
+			splitViewPreviewAction,
+			null,
 			viewPreviewAction,
 			viewHtmlSourceAction,
 			viewMarkdownAstAction,
@@ -469,6 +479,9 @@ class MainWindow {
 				popOver.show(extensionsButton);
 			}));
 		toolBar.getItems().add(extensionsButton);
+		toolBar.getItems().add(new Separator());
+
+		toolBar.getItems().add(ActionUtils.createToolBarButton(splitViewPreviewAction));
 		toolBar.getItems().add(new Separator());
 
 		// preview actions

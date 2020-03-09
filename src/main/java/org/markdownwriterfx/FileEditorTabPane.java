@@ -74,6 +74,7 @@ class FileEditorTabPane {
 	private final ReadOnlyBooleanWrapper anyFileEditorModified = new ReadOnlyBooleanWrapper();
 
 	final PrefsBooleanProperty previewVisible = new PrefsBooleanProperty(true);
+	final PrefsBooleanProperty editorViewerType = new PrefsBooleanProperty(true);
 	final PrefsBooleanProperty htmlSourceVisible = new PrefsBooleanProperty();
 	final PrefsBooleanProperty markdownAstVisible = new PrefsBooleanProperty();
 	final PrefsBooleanProperty externalVisible = new PrefsBooleanProperty();
@@ -466,6 +467,7 @@ class FileEditorTabPane {
 	private void restoreState() {
 		Preferences state = MarkdownWriterFXApp.getState();
 
+		editorViewerType.init(state, "editorViewerType", true);
 		previewVisible.init(state, "previewVisible", true);
 		htmlSourceVisible.init(state, "htmlSourceVisible", false);
 		markdownAstVisible.init(state, "markdownAstVisible", false);

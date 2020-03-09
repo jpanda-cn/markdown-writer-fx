@@ -58,7 +58,6 @@ import org.markdownwriterfx.editor.MarkdownSyntaxHighlighter.ExtraStyledRanges;
 import org.markdownwriterfx.extensions.IDGenerator;
 import org.markdownwriterfx.options.MarkdownExtensions;
 import org.markdownwriterfx.options.Options;
-import org.markdownwriterfx.preview.MarkdownPreviewPane;
 import org.markdownwriterfx.preview.PreviewSyncNotify;
 import org.markdownwriterfx.util.StringDiffusionMatch;
 import org.reactfx.util.Either;
@@ -100,11 +99,6 @@ public class MarkdownEditorPane {
 	private int lastSelectLine = 0;
 	private Selection<Collection<String>, Either<String, EmbeddedImage>, Collection<String>> extraSelection;
 
-	private MarkdownPreviewPane markdownPreviewPane;
-
-	public void setMarkdownPreviewPane(MarkdownPreviewPane markdownPreviewPane) {
-		this.markdownPreviewPane = markdownPreviewPane;
-	}
 
 	public MarkdownEditorPane() {
 		textArea = new MarkdownTextArea();
@@ -132,7 +126,6 @@ public class MarkdownEditorPane {
 		VirtualizedScrollPane<MarkdownTextArea> scrollPane = new VirtualizedScrollPane<>(textArea);
 		// create border pane
 		borderPane = new BottomSlidePane(scrollPane);
-
 		textArea.addEventFilter(ScrollEvent.ANY, e -> {
 			if (e.getEventType().equals(ScrollEvent.SCROLL_FINISHED)) {
 				textArea.requestFollowCaret();
