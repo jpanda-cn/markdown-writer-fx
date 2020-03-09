@@ -258,7 +258,7 @@ class MainWindow {
 
 		// View actions
 
-		Action splitViewPreviewAction = new Action(Messages.get("MainWindow.viewPreviewAction"), "Shortcut+Shift+P", COLUMNS,
+		Action splitViewPreviewAction = new Action(Messages.get("MainWindow.editorViewerTypeAction"), "Shortcut+Shift+P", COLUMNS,
 			null, null, fileEditorTabPane.editorViewerType);
 		
 		Action viewPreviewAction = new Action(Messages.get("MainWindow.viewPreviewAction"), "Shortcut+P", EYE,
