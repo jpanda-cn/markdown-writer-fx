@@ -386,7 +386,6 @@ class FileEditorTabPane {
 		});
 
 		saveEditorsState();
-
 		return true;
 	}
 

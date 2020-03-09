@@ -366,4 +366,9 @@ class WebViewPreview
 			throw new IllegalArgumentException(str);
 		return str.substring(leadingDelim.length(), str.length() - trailingDelim.length());
 	}
+
+	@Override
+	public void close() {
+		webView = null;
+	}
 }

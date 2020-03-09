@@ -124,6 +124,7 @@ class FileEditor {
 		// avoid memory leaks
 		tab.setUserData(null);
 		tab.setContent(null);
+		markdownPreviewPane.close();
 	}
 
 	Tab getTab() {
@@ -238,7 +239,7 @@ class FileEditor {
 				if (isSingle) {
 					// 单窗口视图，无预览场景，默认展示编辑框
 					if (!splitItems.contains(editNode)) {
-						splitItems.add(0,editNode);
+						splitItems.add(0, editNode);
 					}
 				}
 			} else {
@@ -247,7 +248,7 @@ class FileEditor {
 					splitItems.remove(editNode);
 				} else {
 					if (!splitItems.contains(editNode)) {
-						splitItems.add(0,editNode);
+						splitItems.add(0, editNode);
 					}
 				}
 

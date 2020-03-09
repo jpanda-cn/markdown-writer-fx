@@ -63,14 +63,6 @@ public class MarkdownPreviewPane {
 	private Renderer activeRenderer;
 	private Preview activePreview;
 
-	public Renderer getActiveRenderer() {
-		return activeRenderer;
-	}
-
-	public interface EditorRecord {
-
-
-	}
 
 	public interface Renderer {
 		void update(String markdownText, Node astRoot, Path path);
@@ -103,6 +95,9 @@ public class MarkdownPreviewPane {
 		}
 
 		void editorSelectionChanged(PreviewContext context, IndexRange range);
+
+		default void close() {
+		}
 	}
 
 	interface PreviewContext {
@@ -312,4 +307,10 @@ public class MarkdownPreviewPane {
 		return previewSync;
 	}
 
+	public void close() {
+		if (null != activePreview) {
+			activePreview.close();
+			
+		}
+	}
 }
