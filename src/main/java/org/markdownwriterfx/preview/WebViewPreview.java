@@ -44,7 +44,6 @@ import org.markdownwriterfx.preview.MarkdownPreviewPane.Renderer;
 import org.markdownwriterfx.util.Utils;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
-import org.w3c.dom.events.Event;
 import org.w3c.dom.events.EventListener;
 import org.w3c.dom.events.EventTarget;
 
@@ -53,6 +52,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -138,40 +138,48 @@ class WebViewPreview
 			? ("  onload='window.scrollTo(" + lastScrollX + ", " + lastScrollY + ");'")
 			: "";
 
-
 		webView.getEngine().getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
 
 			if (newValue == State.SUCCEEDED) {
 				Document document = webView.getEngine().getDocument();
+				// 获取所有a标签
 				NodeList aList = document.getElementsByTagName("a");
 				for (int i = 0; i < aList.getLength(); i++) {
 					org.w3c.dom.Node n = aList.item(i);
 					org.w3c.dom.Node href = n.getAttributes().getNamedItem("href");
-					if (href != null) {
-						String target = href.getTextContent();
-						if (StringUtils.isNotBlank(target) && target.trim().startsWith("#")) {
-							((EventTarget) n).addEventListener("click", new EventListener() {
-								@Override
-								public void handleEvent(Event evt) {
-									JSObject window = (JSObject) webView.getEngine().executeScript("window");
-									window.call("scrollToElement", target.trim().replaceFirst("#", ""));
-									evt.preventDefault();
-								}
-							}, false);
-						}
+					if (href == null) {
+						continue;
 					}
-					((EventTarget) n).addEventListener("click", new EventListener() {
-						@Override
-						public void handleEvent(Event evt) {
-							try {
-								Desktop.getDesktop().browse(new URI(href.getTextContent()));
-							} catch (Exception e) {
 
-							} finally {
-								evt.preventDefault();
+					String target = href.getTextContent();
+					if (StringUtils.isBlank(target)) {
+						continue;
+					}
+					String targetUri = target.trim();
+
+					boolean toSelf = targetUri.startsWith("#");
+					if (!(n instanceof EventTarget)) {
+						continue;
+					}
+
+					EventTarget node = (EventTarget) n;
+					EventListener e2 = evt -> {
+						try {
+							if (toSelf) {
+								JSObject window = (JSObject) webView.getEngine().executeScript("window");
+								window.call("scrollToElement", targetUri.replaceFirst("#", ""));
+							} else {
+								Desktop.getDesktop().browse(new URI(targetUri));
 							}
+						} catch (URISyntaxException | IOException e) {
+							e.printStackTrace();
+						} finally {
+							evt.preventDefault();
+							evt.stopPropagation();
 						}
-					}, false);
+					};
+
+					node.addEventListener("click", e2, true);
 				}
 			}
 		});
