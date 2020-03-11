@@ -166,8 +166,10 @@ class WebViewPreview
 					EventListener e2 = evt -> {
 						try {
 							if (toSelf) {
-								JSObject window = (JSObject) webView.getEngine().executeScript("window");
-								window.call("scrollToElement", targetUri.replaceFirst("#", ""));
+								PreviewSyncNotify previewSyncNotify=new PreviewSyncNotify();
+								previewSyncNotify.setKey(targetUri.replaceFirst("#", ""));
+								previewSyncNotify.setOriginalProportion(0);
+								scrollY(null,previewSyncNotify);
 							} else {
 								Desktop.getDesktop().browse(new URI(targetUri));
 							}
@@ -212,7 +214,6 @@ class WebViewPreview
 				+ "</body>\n"
 				+ "</html>");
 
-		// TODO test
 	}
 
 
@@ -262,7 +263,6 @@ class WebViewPreview
 			Integer windowHeight = (Integer) window.getMember("innerHeight");
 
 			// Calculate the position that should be offset this time
-			double diff = value.getOriginalProportion();
 
 
 			// ?????????????
